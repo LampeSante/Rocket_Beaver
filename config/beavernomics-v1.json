@@ -1,0 +1,199 @@
+{
+  "project": {
+    "name": "Rocket Beaver",
+    "symbol": "RBVR",
+    "network": "solana",
+    "version": "1.0",
+    "status": "LOCKED_FOR_TECHNICAL_IMPLEMENTATION"
+  },
+
+  "token": {
+    "fixed_initial_supply": 1000000000,
+    "decimals": 9,
+    "creator_allocation_tokens": 0,
+    "team_allocation_target_tokens": 0,
+    "mint_additional_supply_after_genesis": false
+  },
+
+  "launch": {
+    "model": "METEORA_DBC",
+    "target_opening_price_usd": 0.00001,
+    "launch_condition": "TECHNICAL_READINESS",
+    "community_followers_target": 1000,
+    "community_followers_is_launch_requirement": false,
+    "target_post_curve_amm": "METEORA_DAMM_V2"
+  },
+
+  "working_token_distribution": {
+    "community_curve": {
+      "percent": 40,
+      "tokens": 400000000
+    },
+    "initial_amm_liquidity": {
+      "percent": 21,
+      "tokens": 210000000
+    },
+    "locked_future_liquidity": {
+      "percent": 29,
+      "tokens": 290000000
+    },
+    "community_initiatives": {
+      "percent": 10,
+      "tokens": 100000000
+    }
+  },
+
+  "beavernomics": {
+    "eligible_activity_total_target_percent": 1.0,
+
+    "routing": {
+      "protocol_reserve_percent": 0.30,
+      "automatic_buyback_burn_percent": 0.20,
+      "liquidity_growth_percent": 0.20,
+      "company_operations_percent": 0.20,
+      "founder_initial_percent": 0.10
+    }
+  },
+
+  "founder_compensation": {
+    "token_allocation": 0,
+    "progressive_marginal_rates": [
+      {
+        "daily_volume_from": 0,
+        "daily_volume_to": 100000,
+        "percent": 0.10
+      },
+      {
+        "daily_volume_from": 100000,
+        "daily_volume_to": 1000000,
+        "percent": 0.07
+      },
+      {
+        "daily_volume_from": 1000000,
+        "daily_volume_to": 5000000,
+        "percent": 0.04
+      },
+      {
+        "daily_volume_from": 5000000,
+        "daily_volume_to": 25000000,
+        "percent": 0.02
+      },
+      {
+        "daily_volume_from": 25000000,
+        "daily_volume_to": 100000000,
+        "percent": 0.01
+      },
+      {
+        "daily_volume_from": 100000000,
+        "daily_volume_to": null,
+        "percent": 0.002
+      }
+    ],
+
+    "working_annual_personal_cap_usd": {
+      "minimum": 2000000,
+      "maximum": 3000000
+    },
+
+    "priority": "SUBORDINATE_TO_SURVIVAL_WATERFALL"
+  },
+
+  "company_operations": {
+    "funding_model": "ANNUAL_PUBLISHED_BUDGET_PLUS_OPERATING_RESERVE",
+    "unlimited_accumulation_allowed": false,
+
+    "excess_redirect": {
+      "protocol_reserve_percent": 40,
+      "buyback_burn_percent": 30,
+      "liquidity_growth_percent": 30
+    }
+  },
+
+  "buyback_burn": {
+    "automatic": true,
+    "on_chain_verifiable_burn": true,
+    "direct_token_transfer_tax_burn": false,
+
+    "execution_controls": {
+      "batched_or_twap_execution": true,
+      "maximum_slippage_required": true,
+      "maximum_price_impact_required": true,
+      "liquidity_health_gate": true,
+      "reserve_health_gate": true,
+      "price_sanity_checks": true,
+      "cooldowns": true,
+      "execution_caps": true,
+      "circuit_breakers": true
+    },
+
+    "adaptive": true,
+    "must_not_compromise_liquidity": true
+  },
+
+  "liquidity": {
+    "initial_amm_tokens": 210000000,
+    "locked_future_liquidity_tokens": 290000000,
+
+    "future_inventory_rules": {
+      "demand_based": true,
+      "requires_paired_quote_capital": true,
+      "must_improve_market_health": true
+    },
+
+    "protocol_owned_lp_fees": {
+      "compound_by_default_when_efficient": true
+    },
+
+    "cross_platform": {
+      "dex_supported": true,
+      "future_cex_supported": true,
+      "avoid_unnecessary_fragmentation": true,
+      "venue_neutral_execution": true
+    }
+  },
+
+  "survival_waterfall": [
+    "PROTECT_CRITICAL_LIQUIDITY",
+    "PROTECT_PROTOCOL_RESERVE",
+    "MAINTAIN_ESSENTIAL_OPERATIONS",
+    "BUYBACK_BURN_WHEN_HEALTHY",
+    "FOUNDER_COMPENSATION_LAST"
+  ],
+
+  "security": {
+    "single_wallet_control_of_critical_assets": false,
+    "multisig_required_for_critical_treasury": true,
+    "timelocks_where_appropriate": true,
+    "locking_or_vesting_where_appropriate": true,
+    "public_wallet_labeling": true
+  },
+
+  "reporting": {
+    "global_volume": true,
+    "beavernomics_eligible_volume": true,
+    "actual_protocol_revenue": true,
+    "circulating_supply": true,
+    "tokens_burned": true,
+    "protocol_reserve": true,
+    "liquidity": true,
+    "founder_compensation": true,
+    "company_funding": true,
+    "automatic_redirections": true
+  },
+
+  "future_redemption": {
+    "enabled_at_launch": false,
+    "guaranteed_at_launch": false,
+    "separate_optional_layer": true,
+
+    "activation_requires": [
+      "LEGAL_CLEARANCE",
+      "ADEQUATE_RESERVES",
+      "REGULATORY_COMPLIANCE",
+      "CUSTODY",
+      "AML_KYC_IF_REQUIRED",
+      "TECHNICAL_AUDIT",
+      "GOVERNANCE_APPROVAL_IF_APPLICABLE"
+    ]
+  }
+}
