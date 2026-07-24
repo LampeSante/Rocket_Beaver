@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "status": "MODELING_ONLY",
+
+  "token": {
+    "symbol": "RBVR",
+    "decimals": 9,
+    "fixed_initial_supply": 1000000000
+  },
+
+  "launch_targets": {
+    "target_opening_price_usd": 0.00001,
+    "target_opening_fdv_usd": 10000,
+    "working_curve_tokens": 400000000,
+    "working_initial_amm_tokens": 210000000,
+    "locked_future_liquidity_tokens": 290000000,
+    "community_initiatives_tokens": 100000000
+  },
+
+  "migration": {
+    "target": "DAMM_V2",
+    "working_quote_threshold_usd": 40000,
+    "protocol_liquidity_migration_fee_percent": 0.2
+  },
+
+  "constraints": {
+    "fixed_supply": true,
+    "creator_token_allocation": 0,
+    "team_token_allocation": 0,
+    "mainnet_deployment_allowed": false
+  }
+}
