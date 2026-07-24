@@ -3,3 +3,13 @@
 keys/
 .env
 state/devnet/*.secret.json
+
+# Local Solana / WSL development
+.localnet/
+local-validator/
+test-ledger/
+keys/
+*.keypair.json
+.env
+.env.*
+!.env.example
