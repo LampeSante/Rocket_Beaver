@@ -1,0 +1,146 @@
+{
+  "version": "1.0",
+  "network_initial": "solana-devnet",
+
+  "principles": {
+    "single_founder_wallet_control": false,
+    "creator_token_allocation": 0,
+    "team_token_allocation_target": 0,
+    "fixed_genesis_supply": 1000000000,
+    "additional_minting_after_genesis": false,
+    "separate_operational_and_treasury_authorities": true,
+    "public_wallet_labeling": true
+  },
+
+  "mint": {
+    "decimals": 9,
+    "genesis_supply": 1000000000,
+    "mint_authority_during_devnet": "DEPLOYMENT_AUTHORITY",
+    "production_target": "REVOKE_AFTER_SUPPLY_AND_DEPLOYMENT_VERIFIED",
+    "freeze_authority_during_devnet": "DEPLOYMENT_AUTHORITY",
+    "production_target_freeze_authority": "REVOKE_UNLESS_FINAL_SECURITY_REVIEW_REQUIRES_OTHERWISE"
+  },
+
+  "authorities": {
+    "deployment_authority": {
+      "purpose": "Temporary Devnet deployment and configuration",
+      "may_receive_founder_allocation": false,
+      "production_control_target": "NONE_AFTER_VERIFIED_DEPLOYMENT"
+    },
+
+    "treasury_multisig": {
+      "purpose": "High-security protocol treasury governance",
+      "single_signer_allowed": false,
+      "controls": [
+        "PROTOCOL_RESERVE",
+        "FUTURE_LIQUIDITY_VAULT",
+        "COMMUNITY_INITIATIVES_VAULT",
+        "CRITICAL_PROTOCOL_AUTHORITIES"
+      ]
+    },
+
+    "operations_wallet": {
+      "purpose": "Approved company operating expenditure",
+      "funding_source": "COMPANY_OPERATIONS_ROUTING",
+      "unlimited_treasury_access": false,
+      "subject_to_budget_cap": true
+    },
+
+    "buyback_executor": {
+      "purpose": "Execute rules-based RBVR market buybacks",
+      "may_withdraw_protocol_reserve_freely": false,
+      "spending_limited_to_allocated_buyback_funds": true,
+      "requires_execution_guards": true
+    }
+  },
+
+  "token_destinations": {
+    "community_curve": {
+      "tokens": 400000000,
+      "percent": 40,
+      "destination": "METEORA_DBC",
+      "status": "REQUIRES_METEORA_CONFIGURATION_VALIDATION"
+    },
+
+    "initial_amm_liquidity": {
+      "tokens": 210000000,
+      "percent": 21,
+      "destination": "METEORA_DAMM_MIGRATION",
+      "status": "REQUIRES_METEORA_CONFIGURATION_VALIDATION"
+    },
+
+    "future_liquidity": {
+      "tokens": 290000000,
+      "percent": 29,
+      "destination": "FUTURE_LIQUIDITY_VAULT",
+      "authority": "TREASURY_MULTISIG",
+      "deployment_policy": "MEASURABLE_MARKET_NEED_AND_PAIRED_QUOTE_CAPITAL_REQUIRED"
+    },
+
+    "community_initiatives": {
+      "tokens": 100000000,
+      "percent": 10,
+      "destination": "COMMUNITY_INITIATIVES_VAULT",
+      "authority": "TREASURY_MULTISIG",
+      "deployment_policy": "PUBLICLY_DISCLOSED_INITIATIVES_ONLY"
+    }
+  },
+
+  "revenue_destinations": {
+    "protocol_reserve": {
+      "target_percent": 0.30,
+      "destination": "PROTOCOL_RESERVE_VAULT",
+      "authority": "TREASURY_MULTISIG"
+    },
+
+    "buyback_burn": {
+      "target_percent": 0.20,
+      "destination": "BUYBACK_EXECUTION_VAULT",
+      "authority": "RULES_BASED_EXECUTOR",
+      "final_rbvr_destination": "ON_CHAIN_BURN"
+    },
+
+    "liquidity_growth": {
+      "target_percent": 0.20,
+      "destination": "LIQUIDITY_GROWTH_VAULT",
+      "authority": "TREASURY_MULTISIG"
+    },
+
+    "company_operations": {
+      "target_percent": 0.20,
+      "destination": "OPERATIONS_VAULT",
+      "authority": "BUDGET_CONTROLLED",
+      "excess_redirect": {
+        "protocol_reserve_percent": 40,
+        "buyback_burn_percent": 30,
+        "liquidity_growth_percent": 30
+      }
+    },
+
+    "founder_compensation": {
+      "initial_target_percent": 0.10,
+      "destination": "FOUNDER_COMPENSATION_ACCOUNT",
+      "authority": "AUTOMATED_CAP_AND_PROGRESSIVE_RATE_LOGIC",
+      "token_allocation": 0,
+      "subject_to_survival_waterfall": true
+    }
+  },
+
+  "survival_waterfall": [
+    "PROTECT_CRITICAL_LIQUIDITY",
+    "PROTECT_PROTOCOL_RESERVE",
+    "MAINTAIN_ESSENTIAL_OPERATIONS",
+    "BUYBACK_BURN_WHEN_HEALTHY",
+    "FOUNDER_COMPENSATION_LAST"
+  ],
+
+  "production_safety_gates": {
+    "meteora_configuration_validated": false,
+    "allocation_math_validated": false,
+    "devnet_end_to_end_test_passed": false,
+    "authority_review_passed": false,
+    "security_review_passed": false,
+    "legal_regulatory_review_completed": false,
+    "mainnet_deployment_allowed": false
+  }
+}
