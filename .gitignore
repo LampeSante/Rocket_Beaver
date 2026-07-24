@@ -1,0 +1,5 @@
+
+# NEVER COMMIT PRIVATE KEYS
+keys/
+.env
+state/devnet/*.secret.json
