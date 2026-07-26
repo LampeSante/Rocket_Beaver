@@ -1,0 +1,59 @@
+{
+  "name": "Rocket Beaver",
+  "symbol": "RBVR",
+  "description": "Rocket Beaver (RBVR) is a community-driven Solana project that combines meme culture with serious engineering. Built on Meteora's Dynamic Bonding Curve, RBVR emphasizes transparency, fair participation, and sustainable tokenomics. With no team allocation, no creator token allocation, and a commitment to community-first development, Rocket Beaver is designed to reward long-term participation while embracing the fun and creativity that make crypto unique.",
+  "image": "https://rocketbeavertoken.com/assets/rbvr-logo.png",
+  "animation_url": "",
+  "external_url": "https://rocketbeavertoken.com",
+  "seller_fee_basis_points": 0,
+  "attributes": [
+    {
+      "trait_type": "Blockchain",
+      "value": "Solana"
+    },
+    {
+      "trait_type": "Category",
+      "value": "Community Token"
+    },
+    {
+      "trait_type": "Launch Platform",
+      "value": "Meteora Dynamic Bonding Curve"
+    },
+    {
+      "trait_type": "Total Supply",
+      "value": "1,000,000,000 RBVR"
+    },
+    {
+      "trait_type": "Team Allocation",
+      "value": "0%"
+    },
+    {
+      "trait_type": "Creator Allocation",
+      "value": "0%"
+    },
+    {
+      "trait_type": "Mint Authority",
+      "value": "Revoked"
+    },
+    {
+      "trait_type": "Liquidity",
+      "value": "Dynamic Bonding Curve"
+    }
+  ],
+  "properties": {
+    "category": "image",
+    "files": [
+      {
+        "uri": "https://rocketbeavertoken.com/assets/rbvr-logo.png",
+        "type": "image/png"
+      }
+    ],
+    "creators": []
+  },
+  "extensions": {
+    "website": "https://rocketbeavertoken.com",
+    "twitter": "https://x.com/TheDam_RBVR",
+    "telegram": "https://t.me/+2wl0mvDi8Dg2MTMx",
+    "discord": "https://discord.gg/kGGFMugmUh"
+  }
+}

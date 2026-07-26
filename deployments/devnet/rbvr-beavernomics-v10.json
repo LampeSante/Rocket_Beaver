@@ -1,0 +1,19 @@
+{
+  "project": "Rocket Beaver",
+  "symbol": "RBVR",
+  "network": "devnet",
+  "rpcUrl": "https://api.devnet.solana.com",
+  "name": "Rocket Beaver",
+  "metadataUri": "https://rocketbeavertoken.com/token.json",
+  "payer": "4bGnfSSGKBbPhTeKbwxRDADnrFNhwX6FM8nwng2TBv1C",
+  "poolCreator": "4bGnfSSGKBbPhTeKbwxRDADnrFNhwX6FM8nwng2TBv1C",
+  "config": "EEEvuco8uMet7qznTjbRNPUYhiZ1n8WbTeYHrkrMJyn5",
+  "baseMint": "3a1wJXntqWJYYsmXsHg465no1WVZnZzn3gG6ZaUkJ5GB",
+  "quoteMint": "So11111111111111111111111111111111111111112",
+  "pool": "Fu3AsFqJ5gZRRdJ4GkKBg2ioN9pMZAM53rAFCcCg4dTL",
+  "baseVault": "AySYQjFHSUf8FpZ8hsvTf3GZ9DZmVd8mUrPTE2k68vSX",
+  "quoteVault": "8kYakgeuDHmicecLqnEmU8jX2sfab6J9gVBKtb4iJ9VT",
+  "metadata": "CABVmufufyqugBSuvi5t4ixr1FfMz1PDiqksnBenxPKW",
+  "transactionSignature": "2dC1HQJ7AsEyouBh2MRTmXzBsMum1YozC4f3EQJnWyjyggWZpSmWqgxXTzYmj1ZCnFSUqEtwLvCiwD4CGfLebTbr",
+  "createdAt": "2026-07-25T03:21:05.930Z"
+}

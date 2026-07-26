@@ -1,0 +1,18 @@
+[toolchain]
+anchor_version = "1.1.2"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+treasury_router = "5mEQEoksSyTMJifw88UWGna81bY6ghWPJqHNFfDWcYD3"
+
+[provider]
+cluster = "localnet"
+wallet = "/home/alec_elliott/rocket-beaver-dev/keys/local-deployment.json"
+
+[workspace]
+members = [
+    "programs/treasury-router"
+]

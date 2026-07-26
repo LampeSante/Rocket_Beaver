@@ -1,0 +1,40 @@
+/// Root protocol configuration PDA.
+pub const PROTOCOL_SEED: &[u8] = b"protocol";
+
+/// On-chain Beavernomics configuration PDA.
+pub const PROTOCOL_CONFIG_SEED: &[u8] = b"protocol-config";
+
+/// Treasury accounting PDA.
+pub const TREASURY_SEED: &[u8] = b"treasury";
+
+/// Treasury SPL settlement-token vault PDA.
+pub const TREASURY_VAULT_SEED: &[u8] = b"treasury-vault";
+
+/// Founder module PDA seed.
+pub const FOUNDER_STATE_SEED: &[u8] = b"founder-state";
+
+/// Company module PDA seed.
+pub const COMPANY_STATE_SEED: &[u8] = b"company-state";
+
+/// Current on-chain state versions.
+pub const PROTOCOL_VERSION: u16 = 1;
+pub const PROTOCOL_CONFIG_VERSION: u16 = 1;
+pub const TREASURY_VERSION: u16 = 1;
+pub const FOUNDER_STATE_VERSION: u16 = 1;
+pub const COMPANY_STATE_VERSION: u16 = 1;
+
+/// Initial Dam Level: Building.
+pub const INITIAL_DAM_LEVEL: u8 = 0;
+
+/// 10,000 basis points equals 100%.
+pub const BPS_DENOMINATOR: u16 = 10_000;
+
+/// Initial Beavernomics distribution of collected fee proceeds.
+pub const INITIAL_RESERVE_BPS: u16 = 3_000;
+pub const INITIAL_BUYBACK_BURN_BPS: u16 = 2_000;
+pub const INITIAL_LIQUIDITY_BPS: u16 = 2_000;
+pub const INITIAL_COMPANY_BPS: u16 = 2_000;
+pub const INITIAL_FOUNDER_BPS: u16 = 1_000;
+
+/// Initial Survival Waterfall stage.
+pub const INITIAL_WATERFALL_STAGE: u8 = 0;

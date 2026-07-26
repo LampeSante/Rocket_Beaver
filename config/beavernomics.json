@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "name": "RBVR Beavernomics",
+  "totalFeeBps": 100,
+  "allocationsBps": {
+    "protocolReserve": 30,
+    "automaticBuybackBurn": 20,
+    "liquidityGrowth": 20,
+    "companyOperations": 20,
+    "founderInitial": 10
+  },
+  "founder": {
+    "progressive": true,
+    "capped": true,
+    "initialBps": 10,
+    "schedule": [],
+    "annualCap": null,
+    "capCurrency": null
+  },
+  "buyback": {
+    "automatic": true,
+    "permissionlessExecution": true,
+    "burnImmediately": true,
+    "minimumExecutionLamports": 1000000,
+    "maximumSlippageBps": 300
