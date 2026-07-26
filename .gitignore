@@ -1,15 +1,29 @@
+# Node dependencies
+node_modules/
 
-# NEVER COMMIT PRIVATE KEYS
-keys/
-.env
-state/devnet/*.secret.json
-
-# Local Solana / WSL development
-.localnet/
-local-validator/
+# Anchor and Rust build output
+target/
 test-ledger/
-keys/
-*.keypair.json
+.anchor/test-ledger/
+
+# Logs
+*.log
+
+# Local environment and secrets
 .env
 .env.*
 !.env.example
+
+# Temporary and backup files
+*.before-*
+*.bak
+*~
+
+# Solana deployment buffers
+*-upgrade-buffer.json
+
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
