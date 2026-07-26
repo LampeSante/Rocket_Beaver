@@ -27,3 +27,12 @@ test-ledger/
 Thumbs.db
 .vscode/
 .idea/
+
+# Local Solana validator data
+.localnet/
+
+# Private/local key material
+keys/
+
+# Integration backup files
+*.before-integration-tests
