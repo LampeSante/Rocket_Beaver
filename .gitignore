@@ -36,3 +36,7 @@ keys/
 
 # Integration backup files
 *.before-integration-tests
+
+# Local recovery backups
+*.bak-*
+*.corrupted-*
