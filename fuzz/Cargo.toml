@@ -1,0 +1,24 @@
+[package]
+name = "treasury-router-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.treasury-router]
+path = "../programs/treasury-router"
+
+[[bin]]
+name = "execution_release_limit"
+path = "fuzz_targets/execution_release_limit.rs"
+test = false
+doc = false
+bench = false
+
+# Keep the fuzz crate separate from the production Cargo workspace.
+[workspace]
