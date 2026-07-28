@@ -1,0 +1,2418 @@
+diff --git a/programs/treasury-router/src/constants.rs b/programs/treasury-router/src/constants.rs
+index 2ca6a29..68500c5 100644
+--- a/programs/treasury-router/src/constants.rs
++++ b/programs/treasury-router/src/constants.rs
+@@ -16,12 +16,16 @@ pub const FOUNDER_STATE_SEED: &[u8] = b"founder-state";
+ /// Company module PDA seed.
+ pub const COMPANY_STATE_SEED: &[u8] = b"company-state";
+ 
++/// Immutable execution routing configuration PDA.
++pub const EXECUTION_CONFIG_SEED: &[u8] = b"execution-config";
++
+ /// Current on-chain state versions.
+ pub const PROTOCOL_VERSION: u16 = 1;
+ pub const PROTOCOL_CONFIG_VERSION: u16 = 1;
+ pub const TREASURY_VERSION: u16 = 1;
+ pub const FOUNDER_STATE_VERSION: u16 = 1;
+ pub const COMPANY_STATE_VERSION: u16 = 1;
++pub const EXECUTION_CONFIG_VERSION: u16 = 1;
+ 
+ /// Initial Dam Level: Building.
+ pub const INITIAL_DAM_LEVEL: u8 = 0;
+diff --git a/programs/treasury-router/src/engines/company.rs b/programs/treasury-router/src/engines/company.rs
+index d67d3ed..6bbd853 100644
+--- a/programs/treasury-router/src/engines/company.rs
++++ b/programs/treasury-router/src/engines/company.rs
+@@ -18,17 +18,17 @@ pub struct CompanyAllocation {
+ /// Rules:
+ ///
+ /// - If company allocations are disabled:
+-///     100% goes to Liquidity.
++///   100% goes to Liquidity.
+ ///
+ /// - If the accounting period has expired:
+-///     automatically reset.
++///   automatically reset.
+ ///
+ /// - If the requested amount is below the remaining cap:
+-///     company receives everything.
++///   company receives everything.
+ ///
+ /// - If the cap would be exceeded:
+-///     company receives only the remaining allowance,
+-///     with the excess redirected to Liquidity.
++///   company receives only the remaining allowance,
++///   with the excess redirected to Liquidity.
+ ///
+ pub fn allocate(company: &mut CompanyState, requested: u64, now: i64) -> Result<CompanyAllocation> {
+     //
+diff --git a/programs/treasury-router/src/engines/execution_guard.rs b/programs/treasury-router/src/engines/execution_guard.rs
+index 93f8a80..dcfbf8d 100644
+--- a/programs/treasury-router/src/engines/execution_guard.rs
++++ b/programs/treasury-router/src/engines/execution_guard.rs
+@@ -51,6 +51,11 @@ pub fn authorize_release(
+ 
+     validate_accounting_integrity(treasury)?;
+ 
++    require!(
++        treasury.execution_accounting_is_valid(),
++        TreasuryRouterError::AccountingInvariantViolation
++    );
++
+     if bucket == ReleaseBucket::BuybackBurn {
+         require!(
+             !treasury.buybacks_paused,
+@@ -151,6 +156,96 @@ pub fn calculate_maximum_release(pending_balance: u64, release_bps: u16) -> Resu
+ mod tests {
+     use super::*;
+ 
++    fn valid_protocol() -> ProtocolState {
++        ProtocolState {
++            version: 1,
++            authority: Pubkey::new_unique(),
++            protocol_config: Pubkey::new_unique(),
++            treasury_state: Pubkey::new_unique(),
++            reserve_state: Pubkey::new_unique(),
++            liquidity_state: Pubkey::new_unique(),
++            founder_state: Pubkey::new_unique(),
++            company_state: Pubkey::new_unique(),
++            buyback_state: Pubkey::new_unique(),
++            beaver_score: 10_000,
++            dam_level: DamLevel::Overflow.as_u8(),
++            paused: false,
++            bump: 255,
++            initialized_at: 1,
++            reserved: [0; 64],
++        }
++    }
++
++    /// Creates fully settled and internally consistent accounting.
++    ///
++    /// Pending balances:
++    /// - Reserve: 1,000
++    /// - Buyback: 100
++    /// - Liquidity: 100
++    /// - Company: 100
++    /// - Founder: 100
++    ///
++    /// Reserve ratio:
++    /// 1,000 / 1,400 = 71.42%, producing:
++    /// - WaterfallStage::Normal
++    /// - DamLevel::Overflow
++    /// - 100% release limit
++    fn valid_treasury() -> TreasuryState {
++        TreasuryState {
++            version: 1,
++            protocol: Pubkey::new_unique(),
++            settlement_mint: Pubkey::new_unique(),
++            settlement_vault: Pubkey::new_unique(),
++
++            total_fees_received: 1_400,
++            total_fees_allocated: 1_400,
++
++            pending_reserve: 1_000,
++            pending_buyback_burn: 100,
++            pending_liquidity: 100,
++            pending_company: 100,
++            pending_founder: 100,
++
++            lifetime_reserve: 1_000,
++            lifetime_buyback_burn: 100,
++            lifetime_liquidity: 100,
++            lifetime_company: 100,
++            lifetime_founder: 100,
++
++            released_reserve: 0,
++            released_buyback_burn: 0,
++            released_liquidity: 0,
++            released_company: 0,
++            released_founder: 0,
++
++            last_processed_at: 1,
++            processing_epoch: 1,
++            waterfall_stage: WaterfallStage::Normal.as_u8(),
++            buybacks_paused: false,
++            bump: 254,
++            reserved: [0; 24],
++        }
++    }
++
++    fn assert_anchor_error(result: Result<ExecutionAuthorization>, expected_error_name: &str) {
++        let error = match result {
++            Ok(_) => {
++                panic!("Expected Anchor error {expected_error_name}, but authorization succeeded.")
++            }
++            Err(error) => error,
++        };
++
++        match error {
++            anchor_lang::error::Error::AnchorError(anchor_error) => {
++                assert_eq!(
++                    anchor_error.error_name, expected_error_name,
++                    "Unexpected Anchor error: {anchor_error:?}"
++                );
++            }
++            other => panic!("Expected AnchorError {expected_error_name}, received {other:?}."),
++        }
++    }
++
+     #[test]
+     fn full_dam_allows_full_pending_balance() {
+         assert_eq!(calculate_maximum_release(1_000, 10_000).unwrap(), 1_000);
+@@ -179,6 +274,275 @@ mod tests {
+     #[test]
+     fn release_calculation_rounds_down() {
+         assert_eq!(calculate_maximum_release(3, 2_500).unwrap(), 0);
++
+         assert_eq!(calculate_maximum_release(7, 5_000).unwrap(), 3);
+     }
++
++    #[test]
++    fn rejects_invalid_dam_release_rate() {
++        assert_anchor_error(
++            calculate_maximum_release(1_000, 10_001).map(|maximum_release| {
++                ExecutionAuthorization {
++                    bucket: ReleaseBucket::Reserve,
++                    requested_amount: 1,
++                    pending_balance: 1_000,
++                    maximum_release,
++                    waterfall_stage: WaterfallStage::Normal,
++                    dam_level: DamLevel::Overflow,
++                    release_bps: 10_001,
++                    reserve_ratio_bps: 10_000,
++                }
++            }),
++            "InvalidDamReleaseRate",
++        );
++    }
++
++    #[test]
++    fn authorizes_valid_reserve_release() {
++        let protocol = valid_protocol();
++        let treasury = valid_treasury();
++
++        let authorization =
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 750).unwrap();
++
++        assert_eq!(authorization.bucket, ReleaseBucket::Reserve);
++        assert_eq!(authorization.requested_amount, 750);
++        assert_eq!(authorization.pending_balance, 1_000);
++        assert_eq!(authorization.maximum_release, 1_000);
++        assert_eq!(authorization.waterfall_stage, WaterfallStage::Normal);
++        assert_eq!(authorization.dam_level, DamLevel::Overflow);
++        assert_eq!(authorization.release_bps, 10_000);
++        assert_eq!(authorization.reserve_ratio_bps, 7_142);
++    }
++
++    #[test]
++    fn authorizes_valid_buyback_release() {
++        let protocol = valid_protocol();
++        let treasury = valid_treasury();
++
++        let authorization =
++            authorize_release(&protocol, &treasury, ReleaseBucket::BuybackBurn, 100).unwrap();
++
++        assert_eq!(authorization.bucket, ReleaseBucket::BuybackBurn);
++        assert_eq!(authorization.requested_amount, 100);
++        assert_eq!(authorization.pending_balance, 100);
++        assert_eq!(authorization.maximum_release, 100);
++    }
++
++    #[test]
++    fn rejects_release_when_protocol_is_paused() {
++        let mut protocol = valid_protocol();
++        let treasury = valid_treasury();
++
++        protocol.paused = true;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 1),
++            "ProtocolPaused",
++        );
++    }
++
++    #[test]
++    fn rejects_zero_release_amount() {
++        let protocol = valid_protocol();
++        let treasury = valid_treasury();
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 0),
++            "InvalidReleaseAmount",
++        );
++    }
++
++    #[test]
++    fn rejects_buyback_when_buybacks_are_paused() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        treasury.buybacks_paused = true;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::BuybackBurn, 1),
++            "BuybacksPaused",
++        );
++    }
++
++    #[test]
++    fn buyback_pause_does_not_block_other_buckets() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        treasury.buybacks_paused = true;
++
++        let authorization =
++            authorize_release(&protocol, &treasury, ReleaseBucket::Liquidity, 50).unwrap();
++
++        assert_eq!(authorization.bucket, ReleaseBucket::Liquidity);
++        assert_eq!(authorization.requested_amount, 50);
++    }
++
++    #[test]
++    fn rejects_release_exceeding_pending_balance() {
++        let protocol = valid_protocol();
++        let treasury = valid_treasury();
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Company, 101),
++            "InsufficientPendingBalance",
++        );
++    }
++
++    #[test]
++    fn rejects_release_when_dam_is_closed() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        treasury.pending_reserve = 40;
++        treasury.pending_buyback_burn = 240;
++        treasury.pending_liquidity = 240;
++        treasury.pending_company = 240;
++        treasury.pending_founder = 240;
++
++        treasury.lifetime_reserve = 40;
++        treasury.lifetime_buyback_burn = 240;
++        treasury.lifetime_liquidity = 240;
++        treasury.lifetime_company = 240;
++        treasury.lifetime_founder = 240;
++
++        treasury.total_fees_received = 1_000;
++        treasury.total_fees_allocated = 1_000;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Company, 1),
++            "DamClosed",
++        );
++    }
++
++    #[test]
++    fn rejects_release_exceeding_current_dam_limit() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        // 200 / 1,000 = 20%, which is Caution.
++        // Caution maps to a 75% release limit.
++        treasury.pending_reserve = 200;
++        treasury.pending_buyback_burn = 0;
++        treasury.pending_liquidity = 0;
++        treasury.pending_company = 800;
++        treasury.pending_founder = 0;
++
++        treasury.lifetime_reserve = 200;
++        treasury.lifetime_buyback_burn = 0;
++        treasury.lifetime_liquidity = 0;
++        treasury.lifetime_company = 800;
++        treasury.lifetime_founder = 0;
++
++        treasury.total_fees_received = 1_000;
++        treasury.total_fees_allocated = 1_000;
++
++        // Company pending balance is 800.
++        // 75% of 800 is 600.
++        // A request of 601 is within pending but above the Dam limit.
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Company, 601),
++            "ReleaseLimitExceeded",
++        );
++    }
++
++    #[test]
++    fn authorizes_release_at_exact_dam_limit() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        treasury.pending_reserve = 200;
++        treasury.pending_buyback_burn = 0;
++        treasury.pending_liquidity = 0;
++        treasury.pending_company = 800;
++        treasury.pending_founder = 0;
++
++        treasury.lifetime_reserve = 200;
++        treasury.lifetime_buyback_burn = 0;
++        treasury.lifetime_liquidity = 0;
++        treasury.lifetime_company = 800;
++        treasury.lifetime_founder = 0;
++
++        treasury.total_fees_received = 1_000;
++        treasury.total_fees_allocated = 1_000;
++
++        let authorization =
++            authorize_release(&protocol, &treasury, ReleaseBucket::Company, 600).unwrap();
++
++        assert_eq!(authorization.requested_amount, 600);
++        assert_eq!(authorization.pending_balance, 800);
++        assert_eq!(authorization.maximum_release, 600);
++        assert_eq!(authorization.waterfall_stage, WaterfallStage::Caution);
++        assert_eq!(authorization.dam_level, DamLevel::Normal);
++        assert_eq!(authorization.release_bps, 7_500);
++        assert_eq!(authorization.reserve_ratio_bps, 2_000);
++    }
++
++    #[test]
++    fn rejects_when_allocated_fees_exceed_received_fees() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        treasury.total_fees_received = 1_399;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 1),
++            "AccountingInvariantViolation",
++        );
++    }
++
++    #[test]
++    fn rejects_when_total_accounting_is_not_settled() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        treasury.total_fees_received = 1_401;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 1),
++            "AccountingNotSettled",
++        );
++    }
++
++    #[test]
++    fn rejects_invalid_reserve_bucket_accounting() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        // Lifetime must equal pending + released.
++        treasury.lifetime_reserve = 999;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 1),
++            "AccountingInvariantViolation",
++        );
++    }
++
++    #[test]
++    fn rejects_invalid_non_requested_bucket_accounting() {
++        let protocol = valid_protocol();
++        let mut treasury = valid_treasury();
++
++        // A corrupted founder bucket must block a reserve release.
++        // The guard protects the entire treasury, not only the requested bucket.
++        treasury.lifetime_founder = 99;
++
++        assert_anchor_error(
++            authorize_release(&protocol, &treasury, ReleaseBucket::Reserve, 1),
++            "AccountingInvariantViolation",
++        );
++    }
++
++    #[test]
++    fn pending_balance_returns_correct_bucket_amounts() {
++        let treasury = valid_treasury();
++
++        assert_eq!(pending_balance(&treasury, ReleaseBucket::Reserve), 1_000);
++        assert_eq!(pending_balance(&treasury, ReleaseBucket::BuybackBurn), 100);
++        assert_eq!(pending_balance(&treasury, ReleaseBucket::Liquidity), 100);
++        assert_eq!(pending_balance(&treasury, ReleaseBucket::Company), 100);
++        assert_eq!(pending_balance(&treasury, ReleaseBucket::Founder), 100);
++    }
+ }
+diff --git a/programs/treasury-router/src/engines/founder.rs b/programs/treasury-router/src/engines/founder.rs
+index 8fac758..dd9714f 100644
+--- a/programs/treasury-router/src/engines/founder.rs
++++ b/programs/treasury-router/src/engines/founder.rs
+@@ -18,17 +18,17 @@ pub struct FounderAllocation {
+ /// Rules:
+ ///
+ /// - If founder rewards are disabled:
+-///     100% goes to Liquidity.
++///   100% goes to Liquidity.
+ ///
+ /// - If the accounting period has expired:
+-///     automatically reset.
++///   automatically reset.
+ ///
+ /// - If the requested amount is below the remaining cap:
+-///     founder receives everything.
++///   founder receives everything.
+ ///
+ /// - If the cap would be exceeded:
+-///     founder receives only the remaining allowance,
+-///     with the excess redirected to Liquidity.
++///   founder receives only the remaining allowance,
++///   with the excess redirected to Liquidity.
+ ///
+ pub fn allocate(founder: &mut FounderState, requested: u64, now: i64) -> Result<FounderAllocation> {
+     //
+diff --git a/programs/treasury-router/src/errors/mod.rs b/programs/treasury-router/src/errors/mod.rs
+index c0025e8..803b4f6 100644
+--- a/programs/treasury-router/src/errors/mod.rs
++++ b/programs/treasury-router/src/errors/mod.rs
+@@ -23,6 +23,9 @@ pub enum TreasuryRouterError {
+     #[msg("The settlement-token deposit amount must be greater than zero.")]
+     InvalidDepositAmount,
+ 
++    #[msg("There are no unprocessed settlement-token fees in the treasury vault.")]
++    NoUnprocessedFees,
++
+     #[msg("An arithmetic overflow occurred.")]
+     ArithmeticOverflow,
+ 
+diff --git a/programs/treasury-router/src/instructions/buyback.rs b/programs/treasury-router/src/instructions/buyback.rs
+index 627cf04..920d4a5 100644
+--- a/programs/treasury-router/src/instructions/buyback.rs
++++ b/programs/treasury-router/src/instructions/buyback.rs
+@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
+ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
+ 
+ use crate::{
+-    constants::{PROTOCOL_SEED, TREASURY_SEED},
++    constants::{EXECUTION_CONFIG_SEED, PROTOCOL_SEED, TREASURY_SEED},
+     engines::execution_guard::{authorize_release, ReleaseBucket},
+     errors::TreasuryRouterError,
+     events::BuybackExecutionAuthorized,
+-    state::{ProtocolState, TreasuryState},
++    state::{ExecutionConfig, ProtocolState, TreasuryState},
+ };
+ 
+ #[derive(Accounts)]
+@@ -38,6 +38,19 @@ pub struct AuthorizeBuybackExecution<'info> {
+     )]
+     pub treasury: Box<Account<'info, TreasuryState>>,
+ 
++    #[account(
++        seeds = [
++            EXECUTION_CONFIG_SEED,
++            protocol_state.key().as_ref()
++        ],
++        bump = execution_config.bump,
++        constraint = execution_config.protocol_state == protocol_state.key()
++            @ TreasuryRouterError::InvalidTreasuryProtocol,
++        constraint = execution_config.settlement_mint == settlement_mint.key()
++            @ TreasuryRouterError::InvalidSettlementMint
++    )]
++    pub execution_config: Box<Account<'info, ExecutionConfig>>,
++
+     #[account(
+         constraint = settlement_mint.key() == treasury.settlement_mint
+             @ TreasuryRouterError::InvalidSettlementMint
+@@ -58,6 +71,9 @@ pub struct AuthorizeBuybackExecution<'info> {
+     /// Settlement-token account used for the future buyback execution pipeline.
+     #[account(
+         mut,
++        constraint = buyback_destination.key()
++            == execution_config.buyback_destination
++                @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = buyback_destination.key() != settlement_vault.key()
+             @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = buyback_destination.mint == settlement_mint.key()
+@@ -80,16 +96,6 @@ pub struct AuthorizeBuybackExecution<'info> {
+ ///
+ /// It does not allocate fees, execute a DEX swap, purchase RBVR, or burn tokens.
+ pub fn handler(ctx: Context<AuthorizeBuybackExecution>, amount: u64) -> Result<()> {
+-    require!(
+-        !ctx.accounts.protocol_state.paused,
+-        TreasuryRouterError::ProtocolPaused
+-    );
+-
+-    require!(
+-        ctx.accounts.treasury.execution_accounting_is_valid(),
+-        TreasuryRouterError::AccountingInvariantViolation
+-    );
+-
+     let authorization = authorize_release(
+         &ctx.accounts.protocol_state,
+         &ctx.accounts.treasury,
+diff --git a/programs/treasury-router/src/instructions/company.rs b/programs/treasury-router/src/instructions/company.rs
+index 375532d..bb6ee66 100644
+--- a/programs/treasury-router/src/instructions/company.rs
++++ b/programs/treasury-router/src/instructions/company.rs
+@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
+ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
+ 
+ use crate::{
+-    constants::{COMPANY_STATE_SEED, PROTOCOL_SEED, TREASURY_SEED},
++    constants::{COMPANY_STATE_SEED, EXECUTION_CONFIG_SEED, PROTOCOL_SEED, TREASURY_SEED},
+     engines::execution_guard::{authorize_release, ReleaseBucket},
+     errors::TreasuryRouterError,
+     events::CompanyExecutionAuthorized,
+-    state::{CompanyState, ProtocolState, TreasuryState},
++    state::{CompanyState, ExecutionConfig, ProtocolState, TreasuryState},
+ };
+ 
+ #[derive(Accounts)]
+@@ -51,6 +51,19 @@ pub struct AuthorizeCompanyExecution<'info> {
+     )]
+     pub company_state: Box<Account<'info, CompanyState>>,
+ 
++    #[account(
++        seeds = [
++            EXECUTION_CONFIG_SEED,
++            protocol_state.key().as_ref()
++        ],
++        bump = execution_config.bump,
++        constraint = execution_config.protocol_state == protocol_state.key()
++            @ TreasuryRouterError::InvalidTreasuryProtocol,
++        constraint = execution_config.settlement_mint == settlement_mint.key()
++            @ TreasuryRouterError::InvalidSettlementMint
++    )]
++    pub execution_config: Box<Account<'info, ExecutionConfig>>,
++
+     #[account(
+         constraint = settlement_mint.key() == treasury.settlement_mint
+             @ TreasuryRouterError::InvalidSettlementMint
+@@ -71,6 +84,9 @@ pub struct AuthorizeCompanyExecution<'info> {
+     /// Settlement-token account controlled by the configured company recipient.
+     #[account(
+         mut,
++        constraint = company_destination.key()
++            == execution_config.company_destination
++                @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = company_destination.key() != settlement_vault.key()
+             @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = company_destination.mint == settlement_mint.key()
+@@ -93,16 +109,6 @@ pub struct AuthorizeCompanyExecution<'info> {
+ ///
+ /// The settlement-token transfer and treasury accounting update are atomic.
+ pub fn handler(ctx: Context<AuthorizeCompanyExecution>, amount: u64) -> Result<()> {
+-    require!(
+-        !ctx.accounts.protocol_state.paused,
+-        TreasuryRouterError::ProtocolPaused
+-    );
+-
+-    require!(
+-        ctx.accounts.treasury.execution_accounting_is_valid(),
+-        TreasuryRouterError::AccountingInvariantViolation
+-    );
+-
+     let authorization = authorize_release(
+         &ctx.accounts.protocol_state,
+         &ctx.accounts.treasury,
+diff --git a/programs/treasury-router/src/instructions/founder.rs b/programs/treasury-router/src/instructions/founder.rs
+index b671021..803f80c 100644
+--- a/programs/treasury-router/src/instructions/founder.rs
++++ b/programs/treasury-router/src/instructions/founder.rs
+@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
+ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
+ 
+ use crate::{
+-    constants::{FOUNDER_STATE_SEED, PROTOCOL_SEED, TREASURY_SEED},
++    constants::{EXECUTION_CONFIG_SEED, FOUNDER_STATE_SEED, PROTOCOL_SEED, TREASURY_SEED},
+     engines::execution_guard::{authorize_release, ReleaseBucket},
+     errors::TreasuryRouterError,
+     events::FounderExecutionAuthorized,
+-    state::{FounderState, ProtocolState, TreasuryState},
++    state::{ExecutionConfig, FounderState, ProtocolState, TreasuryState},
+ };
+ 
+ #[derive(Accounts)]
+@@ -51,6 +51,19 @@ pub struct AuthorizeFounderExecution<'info> {
+     )]
+     pub founder_state: Box<Account<'info, FounderState>>,
+ 
++    #[account(
++        seeds = [
++            EXECUTION_CONFIG_SEED,
++            protocol_state.key().as_ref()
++        ],
++        bump = execution_config.bump,
++        constraint = execution_config.protocol_state == protocol_state.key()
++            @ TreasuryRouterError::InvalidTreasuryProtocol,
++        constraint = execution_config.settlement_mint == settlement_mint.key()
++            @ TreasuryRouterError::InvalidSettlementMint
++    )]
++    pub execution_config: Box<Account<'info, ExecutionConfig>>,
++
+     #[account(
+         constraint = settlement_mint.key() == treasury.settlement_mint
+             @ TreasuryRouterError::InvalidSettlementMint
+@@ -71,6 +84,9 @@ pub struct AuthorizeFounderExecution<'info> {
+     /// Settlement-token account controlled by the configured founder recipient.
+     #[account(
+         mut,
++        constraint = founder_destination.key()
++            == execution_config.founder_destination
++                @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = founder_destination.key() != settlement_vault.key()
+             @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = founder_destination.mint == settlement_mint.key()
+@@ -93,16 +109,6 @@ pub struct AuthorizeFounderExecution<'info> {
+ ///
+ /// The settlement-token transfer and treasury accounting update are atomic.
+ pub fn handler(ctx: Context<AuthorizeFounderExecution>, amount: u64) -> Result<()> {
+-    require!(
+-        !ctx.accounts.protocol_state.paused,
+-        TreasuryRouterError::ProtocolPaused
+-    );
+-
+-    require!(
+-        ctx.accounts.treasury.execution_accounting_is_valid(),
+-        TreasuryRouterError::AccountingInvariantViolation
+-    );
+-
+     let authorization = authorize_release(
+         &ctx.accounts.protocol_state,
+         &ctx.accounts.treasury,
+diff --git a/programs/treasury-router/src/instructions/liquidity.rs b/programs/treasury-router/src/instructions/liquidity.rs
+index 65b2457..259e469 100644
+--- a/programs/treasury-router/src/instructions/liquidity.rs
++++ b/programs/treasury-router/src/instructions/liquidity.rs
+@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
+ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
+ 
+ use crate::{
+-    constants::{PROTOCOL_SEED, TREASURY_SEED},
++    constants::{EXECUTION_CONFIG_SEED, PROTOCOL_SEED, TREASURY_SEED},
+     engines::execution_guard::{authorize_release, ReleaseBucket},
+     errors::TreasuryRouterError,
+     events::LiquidityExecutionAuthorized,
+-    state::{ProtocolState, TreasuryState},
++    state::{ExecutionConfig, ProtocolState, TreasuryState},
+ };
+ 
+ #[derive(Accounts)]
+@@ -38,6 +38,19 @@ pub struct AuthorizeLiquidityExecution<'info> {
+     )]
+     pub treasury: Box<Account<'info, TreasuryState>>,
+ 
++    #[account(
++        seeds = [
++            EXECUTION_CONFIG_SEED,
++            protocol_state.key().as_ref()
++        ],
++        bump = execution_config.bump,
++        constraint = execution_config.protocol_state == protocol_state.key()
++            @ TreasuryRouterError::InvalidTreasuryProtocol,
++        constraint = execution_config.settlement_mint == settlement_mint.key()
++            @ TreasuryRouterError::InvalidSettlementMint
++    )]
++    pub execution_config: Box<Account<'info, ExecutionConfig>>,
++
+     #[account(
+         constraint = settlement_mint.key() == treasury.settlement_mint
+             @ TreasuryRouterError::InvalidSettlementMint
+@@ -58,6 +71,9 @@ pub struct AuthorizeLiquidityExecution<'info> {
+     /// Settlement-token account used for liquidity deployment.
+     #[account(
+         mut,
++        constraint = liquidity_destination.key()
++            == execution_config.liquidity_destination
++                @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = liquidity_destination.key() != settlement_vault.key()
+             @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = liquidity_destination.mint == settlement_mint.key()
+@@ -77,16 +93,6 @@ pub struct AuthorizeLiquidityExecution<'info> {
+ ///
+ /// It does not allocate fees, execute a swap, or create an LP position.
+ pub fn handler(ctx: Context<AuthorizeLiquidityExecution>, amount: u64) -> Result<()> {
+-    require!(
+-        !ctx.accounts.protocol_state.paused,
+-        TreasuryRouterError::ProtocolPaused
+-    );
+-
+-    require!(
+-        ctx.accounts.treasury.execution_accounting_is_valid(),
+-        TreasuryRouterError::AccountingInvariantViolation
+-    );
+-
+     let authorization = authorize_release(
+         &ctx.accounts.protocol_state,
+         &ctx.accounts.treasury,
+diff --git a/programs/treasury-router/src/instructions/mod.rs b/programs/treasury-router/src/instructions/mod.rs
+index 9f5604d..5ca8088 100644
+--- a/programs/treasury-router/src/instructions/mod.rs
++++ b/programs/treasury-router/src/instructions/mod.rs
+@@ -1,9 +1,12 @@
++#![allow(ambiguous_glob_reexports)]
++
+ pub mod buyback;
+ pub mod company;
+ pub mod deposit_settlement;
+ pub mod founder;
+ pub mod initialize;
+ pub mod initialize_company;
++pub mod initialize_execution_config;
+ pub mod initialize_founder;
+ pub mod initialize_protocol_config;
+ pub mod initialize_treasury;
+@@ -17,6 +20,7 @@ pub use deposit_settlement::*;
+ pub use founder::*;
+ pub use initialize::*;
+ pub use initialize_company::*;
++pub use initialize_execution_config::*;
+ pub use initialize_founder::*;
+ pub use initialize_protocol_config::*;
+ pub use initialize_treasury::*;
+diff --git a/programs/treasury-router/src/instructions/process_fees.rs b/programs/treasury-router/src/instructions/process_fees.rs
+index 462b6de..0898731 100644
+--- a/programs/treasury-router/src/instructions/process_fees.rs
++++ b/programs/treasury-router/src/instructions/process_fees.rs
+@@ -1,4 +1,5 @@
+ use anchor_lang::prelude::*;
++use anchor_spl::token::TokenAccount;
+ 
+ use crate::{
+     constants::{
+@@ -16,7 +17,6 @@ pub struct ProcessFees<'info> {
+         mut,
+         seeds = [PROTOCOL_SEED],
+         bump = protocol_state.bump,
+-        has_one = authority,
+         has_one = protocol_config,
+         constraint = protocol_state.treasury_state == treasury.key(),
+         constraint = protocol_state.founder_state == founder_state.key(),
+@@ -67,15 +67,46 @@ pub struct ProcessFees<'info> {
+     )]
+     pub company_state: Box<Account<'info, CompanyState>>,
+ 
+-    pub authority: Signer<'info>,
++    #[account(
++        constraint = settlement_vault.key() == treasury.settlement_vault
++            @ TreasuryRouterError::InvalidSettlementVault,
++        constraint = settlement_vault.mint == treasury.settlement_mint
++            @ TreasuryRouterError::InvalidSettlementMint,
++        constraint = settlement_vault.owner == treasury.key()
++            @ TreasuryRouterError::InvalidSettlementVault
++    )]
++    pub settlement_vault: Box<Account<'info, TokenAccount>>,
+ }
+ 
+-pub fn handler(ctx: Context<ProcessFees>, amount: u64) -> Result<()> {
++pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
+     require!(
+         !ctx.accounts.protocol_state.paused,
+         TreasuryRouterError::ProtocolPaused
+     );
+ 
++    let total_released = ctx
++        .accounts
++        .treasury
++        .released_reserve
++        .checked_add(ctx.accounts.treasury.released_buyback_burn)
++        .and_then(|value| value.checked_add(ctx.accounts.treasury.released_liquidity))
++        .and_then(|value| value.checked_add(ctx.accounts.treasury.released_company))
++        .and_then(|value| value.checked_add(ctx.accounts.treasury.released_founder))
++        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
++
++    let total_received = ctx
++        .accounts
++        .settlement_vault
++        .amount
++        .checked_add(total_released)
++        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
++
++    let amount = total_received
++        .checked_sub(ctx.accounts.treasury.total_fees_allocated)
++        .ok_or(TreasuryRouterError::AccountingInvariantViolation)?;
++
++    require!(amount > 0, TreasuryRouterError::NoUnprocessedFees);
++
+     let config = &ctx.accounts.protocol_config;
+ 
+     let total_bps = u32::from(config.reserve_bps)
+@@ -132,11 +163,16 @@ pub fn handler(ctx: Context<ProcessFees>, amount: u64) -> Result<()> {
+     let founder_amount = founder_allocation.founder_amount;
+     let company_amount = company_allocation.company_amount;
+ 
+-    let expected_reserve_amount = normal_reserve_amount;
++    // Locked Bevernomics rule:
++    // all Company and Founder cap overflow is redirected to Liquidity Growth.
++    let final_liquidity_amount = liquidity_amount
++        .checked_add(founder_allocation.liquidity_overflow_amount)
++        .and_then(|value| value.checked_add(company_allocation.liquidity_overflow_amount))
++        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+ 
+-    let final_allocated_amount = expected_reserve_amount
++    let final_allocated_amount = normal_reserve_amount
+         .checked_add(buyback_amount)
+-        .and_then(|value| value.checked_add(liquidity_amount))
++        .and_then(|value| value.checked_add(final_liquidity_amount))
+         .and_then(|value| value.checked_add(company_amount))
+         .and_then(|value| value.checked_add(founder_amount))
+         .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+@@ -160,13 +196,7 @@ pub fn handler(ctx: Context<ProcessFees>, amount: u64) -> Result<()> {
+ 
+     let reserve_deposit = reserve::deposit_fee_allocation(treasury, normal_reserve_amount)?;
+ 
+-    let liquidity_deposit = liquidity::deposit(
+-        treasury,
+-        liquidity_amount
+-            .checked_add(founder_allocation.liquidity_overflow_amount)
+-            .and_then(|v| v.checked_add(company_allocation.liquidity_overflow_amount))
+-            .ok_or(TreasuryRouterError::ArithmeticOverflow)?,
+-    )?;
++    let liquidity_deposit = liquidity::deposit(treasury, final_liquidity_amount)?;
+ 
+     let buyback_deposit = buyback::deposit(treasury, buyback_amount)?;
+ 
+@@ -371,3 +401,235 @@ fn calculate_share(amount: u64, basis_points: u16) -> Result<u64> {
+ 
+     u64::try_from(share).map_err(|_| TreasuryRouterError::ArithmeticOverflow.into())
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn calculate_total(
++        reserve: u64,
++        buyback: u64,
++        liquidity: u64,
++        company: u64,
++        founder: u64,
++    ) -> Result<u64> {
++        reserve
++            .checked_add(buyback)
++            .and_then(|value| value.checked_add(liquidity))
++            .and_then(|value| value.checked_add(company))
++            .and_then(|value| value.checked_add(founder))
++            .ok_or(TreasuryRouterError::ArithmeticOverflow.into())
++    }
++
++    #[test]
++    fn calculate_share_returns_exact_whole_number_share() {
++        let result = calculate_share(1_000_000, 3_000).unwrap();
++
++        assert_eq!(result, 300_000);
++    }
++
++    #[test]
++    fn calculate_share_rounds_down() {
++        let result = calculate_share(101, 2_000).unwrap();
++
++        assert_eq!(result, 20);
++    }
++
++    #[test]
++    fn calculate_share_returns_zero_for_zero_amount() {
++        let result = calculate_share(0, 3_000).unwrap();
++
++        assert_eq!(result, 0);
++    }
++
++    #[test]
++    fn calculate_share_returns_zero_for_zero_basis_points() {
++        let result = calculate_share(1_000_000, 0).unwrap();
++
++        assert_eq!(result, 0);
++    }
++
++    #[test]
++    fn calculate_share_returns_full_amount_for_full_basis_points() {
++        let result = calculate_share(1_000_000, BPS_DENOMINATOR).unwrap();
++
++        assert_eq!(result, 1_000_000);
++    }
++
++    #[test]
++    fn calculate_share_handles_u64_max_without_multiplication_overflow() {
++        let result = calculate_share(u64::MAX, BPS_DENOMINATOR).unwrap();
++
++        assert_eq!(result, u64::MAX);
++    }
++
++    #[test]
++    fn locked_normal_allocation_is_conserved() {
++        let amount = 1_000_000;
++
++        let reserve = calculate_share(amount, 3_000).unwrap();
++        let buyback = calculate_share(amount, 2_000).unwrap();
++        let liquidity = calculate_share(amount, 2_000).unwrap();
++        let company = calculate_share(amount, 2_000).unwrap();
++        let founder = calculate_share(amount, 1_000).unwrap();
++
++        let total = calculate_total(reserve, buyback, liquidity, company, founder).unwrap();
++
++        assert_eq!(reserve, 300_000);
++        assert_eq!(buyback, 200_000);
++        assert_eq!(liquidity, 200_000);
++        assert_eq!(company, 200_000);
++        assert_eq!(founder, 100_000);
++        assert_eq!(total, amount);
++    }
++
++    #[test]
++    fn rounding_remainder_is_assigned_to_reserve() {
++        let amount = 101;
++
++        let base_reserve = calculate_share(amount, 3_000).unwrap();
++        let buyback = calculate_share(amount, 2_000).unwrap();
++        let liquidity = calculate_share(amount, 2_000).unwrap();
++        let company = calculate_share(amount, 2_000).unwrap();
++        let founder = calculate_share(amount, 1_000).unwrap();
++
++        let allocated_before_remainder =
++            calculate_total(base_reserve, buyback, liquidity, company, founder).unwrap();
++
++        let rounding_remainder = amount.checked_sub(allocated_before_remainder).unwrap();
++
++        let final_reserve = base_reserve.checked_add(rounding_remainder).unwrap();
++
++        let total = calculate_total(final_reserve, buyback, liquidity, company, founder).unwrap();
++
++        assert_eq!(base_reserve, 30);
++        assert_eq!(rounding_remainder, 1);
++        assert_eq!(final_reserve, 31);
++        assert_eq!(total, amount);
++    }
++
++    #[test]
++    fn company_cap_overflow_redirected_to_liquidity_is_conserved() {
++        let normal_reserve: u64 = 300;
++        let buyback: u64 = 200;
++        let base_liquidity: u64 = 200;
++        let requested_company: u64 = 200;
++        let founder = 100;
++
++        let actual_company: u64 = 50;
++        let company_overflow = requested_company - actual_company;
++
++        let final_liquidity = base_liquidity.checked_add(company_overflow).unwrap();
++
++        let total = calculate_total(
++            normal_reserve,
++            buyback,
++            final_liquidity,
++            actual_company,
++            founder,
++        )
++        .unwrap();
++
++        assert_eq!(company_overflow, 150);
++        assert_eq!(final_liquidity, 350);
++        assert_eq!(total, 1_000);
++    }
++
++    #[test]
++    fn founder_cap_overflow_redirected_to_liquidity_is_conserved() {
++        let normal_reserve: u64 = 300;
++        let buyback: u64 = 200;
++        let base_liquidity: u64 = 200;
++        let company = 200;
++        let requested_founder: u64 = 100;
++
++        let actual_founder: u64 = 25;
++        let founder_overflow = requested_founder - actual_founder;
++
++        let final_liquidity = base_liquidity.checked_add(founder_overflow).unwrap();
++
++        let total = calculate_total(
++            normal_reserve,
++            buyback,
++            final_liquidity,
++            company,
++            actual_founder,
++        )
++        .unwrap();
++
++        assert_eq!(founder_overflow, 75);
++        assert_eq!(final_liquidity, 275);
++        assert_eq!(total, 1_000);
++    }
++
++    #[test]
++    fn simultaneous_company_and_founder_overflow_is_conserved() {
++        let normal_reserve: u64 = 300;
++        let buyback: u64 = 200;
++        let base_liquidity: u64 = 200;
++
++        let requested_company: u64 = 200;
++        let actual_company: u64 = 50;
++        let company_overflow = requested_company - actual_company;
++
++        let requested_founder: u64 = 100;
++        let actual_founder: u64 = 25;
++        let founder_overflow = requested_founder - actual_founder;
++
++        let final_liquidity = base_liquidity
++            .checked_add(company_overflow)
++            .and_then(|value| value.checked_add(founder_overflow))
++            .unwrap();
++
++        let total = calculate_total(
++            normal_reserve,
++            buyback,
++            final_liquidity,
++            actual_company,
++            actual_founder,
++        )
++        .unwrap();
++
++        assert_eq!(company_overflow, 150);
++        assert_eq!(founder_overflow, 75);
++        assert_eq!(final_liquidity, 425);
++        assert_eq!(total, 1_000);
++    }
++
++    #[test]
++    fn fully_capped_company_and_founder_allocations_go_to_liquidity() {
++        let normal_reserve: u64 = 300;
++        let buyback: u64 = 200;
++        let base_liquidity: u64 = 200;
++
++        let actual_company: u64 = 0;
++        let company_overflow: u64 = 200;
++
++        let actual_founder: u64 = 0;
++        let founder_overflow: u64 = 100;
++
++        let final_liquidity = base_liquidity
++            .checked_add(company_overflow)
++            .and_then(|value| value.checked_add(founder_overflow))
++            .unwrap();
++
++        let total = calculate_total(
++            normal_reserve,
++            buyback,
++            final_liquidity,
++            actual_company,
++            actual_founder,
++        )
++        .unwrap();
++
++        assert_eq!(final_liquidity, 500);
++        assert_eq!(total, 1_000);
++    }
++
++    #[test]
++    fn allocation_total_fails_on_overflow() {
++        let result = calculate_total(u64::MAX, 1, 0, 0, 0);
++
++        assert!(result.is_err());
++    }
++}
+diff --git a/programs/treasury-router/src/instructions/reserve.rs b/programs/treasury-router/src/instructions/reserve.rs
+index 698b63b..bb6adc4 100644
+--- a/programs/treasury-router/src/instructions/reserve.rs
++++ b/programs/treasury-router/src/instructions/reserve.rs
+@@ -2,11 +2,11 @@ use anchor_lang::prelude::*;
+ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
+ 
+ use crate::{
+-    constants::{PROTOCOL_SEED, TREASURY_SEED},
++    constants::{EXECUTION_CONFIG_SEED, PROTOCOL_SEED, TREASURY_SEED},
+     engines::execution_guard::{authorize_release, ReleaseBucket},
+     errors::TreasuryRouterError,
+     events::ReserveExecutionAuthorized,
+-    state::{ProtocolState, TreasuryState},
++    state::{ExecutionConfig, ProtocolState, TreasuryState},
+ };
+ 
+ #[derive(Accounts)]
+@@ -38,6 +38,19 @@ pub struct AuthorizeReserveExecution<'info> {
+     )]
+     pub treasury: Box<Account<'info, TreasuryState>>,
+ 
++    #[account(
++        seeds = [
++            EXECUTION_CONFIG_SEED,
++            protocol_state.key().as_ref()
++        ],
++        bump = execution_config.bump,
++        constraint = execution_config.protocol_state == protocol_state.key()
++            @ TreasuryRouterError::InvalidTreasuryProtocol,
++        constraint = execution_config.settlement_mint == settlement_mint.key()
++            @ TreasuryRouterError::InvalidSettlementMint
++    )]
++    pub execution_config: Box<Account<'info, ExecutionConfig>>,
++
+     #[account(
+         constraint = settlement_mint.key() == treasury.settlement_mint
+             @ TreasuryRouterError::InvalidSettlementMint
+@@ -58,6 +71,9 @@ pub struct AuthorizeReserveExecution<'info> {
+     /// Reserve-controlled settlement-token account receiving the release.
+     #[account(
+         mut,
++        constraint = reserve_destination.key()
++            == execution_config.reserve_destination
++                @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = reserve_destination.key() != settlement_vault.key()
+             @ TreasuryRouterError::InvalidExecutionDestination,
+         constraint = reserve_destination.mint == settlement_mint.key()
+@@ -80,16 +96,6 @@ pub struct AuthorizeReserveExecution<'info> {
+ ///
+ /// It does not allocate fees or modify lifetime reserve allocation.
+ pub fn handler(ctx: Context<AuthorizeReserveExecution>, amount: u64) -> Result<()> {
+-    require!(
+-        !ctx.accounts.protocol_state.paused,
+-        TreasuryRouterError::ProtocolPaused
+-    );
+-
+-    require!(
+-        ctx.accounts.treasury.execution_accounting_is_valid(),
+-        TreasuryRouterError::AccountingInvariantViolation
+-    );
+-
+     let authorization = authorize_release(
+         &ctx.accounts.protocol_state,
+         &ctx.accounts.treasury,
+diff --git a/programs/treasury-router/src/lib.rs b/programs/treasury-router/src/lib.rs
+index 33f5a9e..fda5c43 100644
+--- a/programs/treasury-router/src/lib.rs
++++ b/programs/treasury-router/src/lib.rs
+@@ -46,12 +46,16 @@ pub mod treasury_router {
+         instructions::initialize_treasury::handler(ctx)
+     }
+ 
++    pub fn initialize_execution_config(ctx: Context<InitializeExecutionConfig>) -> Result<()> {
++        instructions::initialize_execution_config::handler(ctx)
++    }
++
+     pub fn deposit_settlement(ctx: Context<DepositSettlement>, amount: u64) -> Result<()> {
+         instructions::deposit_settlement::handler(ctx, amount)
+     }
+ 
+-    pub fn process_fees(ctx: Context<ProcessFees>, amount: u64) -> Result<()> {
+-        instructions::process_fees::handler(ctx, amount)
++    pub fn process_fees(ctx: Context<ProcessFees>) -> Result<()> {
++        instructions::process_fees::handler(ctx)
+     }
+ 
+     pub fn authorize_reserve_execution(
+diff --git a/programs/treasury-router/src/state/mod.rs b/programs/treasury-router/src/state/mod.rs
+index 4076060..5342f37 100644
+--- a/programs/treasury-router/src/state/mod.rs
++++ b/programs/treasury-router/src/state/mod.rs
+@@ -1,10 +1,12 @@
+ pub mod company;
++pub mod execution_config;
+ pub mod founder;
+ pub mod protocol;
+ pub mod protocol_config;
+ pub mod treasury;
+ 
+ pub use company::*;
++pub use execution_config::*;
+ pub use founder::*;
+ pub use protocol::*;
+ pub use protocol_config::*;
+diff --git a/programs/treasury-router/src/state/treasury.rs b/programs/treasury-router/src/state/treasury.rs
+index d9eb7de..11083ef 100644
+--- a/programs/treasury-router/src/state/treasury.rs
++++ b/programs/treasury-router/src/state/treasury.rs
+@@ -73,43 +73,29 @@ impl TreasuryState {
+         24; // reserved
+ 
+     pub fn reserve_accounting_is_valid(&self) -> bool {
+-        self.lifetime_reserve
+-            == self
+-                .pending_reserve
+-                .checked_add(self.released_reserve)
+-                .unwrap_or(u64::MAX)
++        self.lifetime_reserve == self.pending_reserve.saturating_add(self.released_reserve)
+     }
+ 
+     pub fn buyback_accounting_is_valid(&self) -> bool {
+         self.lifetime_buyback_burn
+             == self
+                 .pending_buyback_burn
+-                .checked_add(self.released_buyback_burn)
+-                .unwrap_or(u64::MAX)
++                .saturating_add(self.released_buyback_burn)
+     }
+ 
+     pub fn liquidity_accounting_is_valid(&self) -> bool {
+         self.lifetime_liquidity
+             == self
+                 .pending_liquidity
+-                .checked_add(self.released_liquidity)
+-                .unwrap_or(u64::MAX)
++                .saturating_add(self.released_liquidity)
+     }
+ 
+     pub fn company_accounting_is_valid(&self) -> bool {
+-        self.lifetime_company
+-            == self
+-                .pending_company
+-                .checked_add(self.released_company)
+-                .unwrap_or(u64::MAX)
++        self.lifetime_company == self.pending_company.saturating_add(self.released_company)
+     }
+ 
+     pub fn founder_accounting_is_valid(&self) -> bool {
+-        self.lifetime_founder
+-            == self
+-                .pending_founder
+-                .checked_add(self.released_founder)
+-                .unwrap_or(u64::MAX)
++        self.lifetime_founder == self.pending_founder.saturating_add(self.released_founder)
+     }
+ 
+     pub fn execution_accounting_is_valid(&self) -> bool {
+@@ -120,3 +106,268 @@ impl TreasuryState {
+             && self.founder_accounting_is_valid()
+     }
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    fn valid_treasury() -> TreasuryState {
++        TreasuryState {
++            version: 1,
++            protocol: Pubkey::new_unique(),
++            settlement_mint: Pubkey::new_unique(),
++            settlement_vault: Pubkey::new_unique(),
++
++            total_fees_received: 1_500,
++            total_fees_allocated: 1_500,
++
++            pending_reserve: 250,
++            pending_buyback_burn: 200,
++            pending_liquidity: 300,
++            pending_company: 400,
++            pending_founder: 100,
++
++            lifetime_reserve: 300,
++            lifetime_buyback_burn: 250,
++            lifetime_liquidity: 350,
++            lifetime_company: 500,
++            lifetime_founder: 100,
++
++            released_reserve: 50,
++            released_buyback_burn: 50,
++            released_liquidity: 50,
++            released_company: 100,
++            released_founder: 0,
++
++            last_processed_at: 1,
++            processing_epoch: 1,
++            waterfall_stage: 0,
++            buybacks_paused: false,
++            bump: 255,
++            reserved: [0; 24],
++        }
++    }
++
++    #[test]
++    fn reserve_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
++        let treasury = valid_treasury();
++
++        assert!(treasury.reserve_accounting_is_valid());
++    }
++
++    #[test]
++    fn reserve_accounting_is_invalid_when_values_do_not_balance() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_reserve = 299;
++
++        assert!(!treasury.reserve_accounting_is_valid());
++    }
++
++    #[test]
++    fn reserve_accounting_fails_closed_on_overflow() {
++        let mut treasury = valid_treasury();
++
++        treasury.pending_reserve = u64::MAX;
++        treasury.released_reserve = 1;
++        treasury.lifetime_reserve = 0;
++
++        assert!(!treasury.reserve_accounting_is_valid());
++    }
++
++    #[test]
++    fn buyback_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
++        let treasury = valid_treasury();
++
++        assert!(treasury.buyback_accounting_is_valid());
++    }
++
++    #[test]
++    fn buyback_accounting_is_invalid_when_values_do_not_balance() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_buyback_burn = 249;
++
++        assert!(!treasury.buyback_accounting_is_valid());
++    }
++
++    #[test]
++    fn buyback_accounting_fails_closed_on_overflow() {
++        let mut treasury = valid_treasury();
++
++        treasury.pending_buyback_burn = u64::MAX;
++        treasury.released_buyback_burn = 1;
++        treasury.lifetime_buyback_burn = 0;
++
++        assert!(!treasury.buyback_accounting_is_valid());
++    }
++
++    #[test]
++    fn liquidity_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
++        let treasury = valid_treasury();
++
++        assert!(treasury.liquidity_accounting_is_valid());
++    }
++
++    #[test]
++    fn liquidity_accounting_is_invalid_when_values_do_not_balance() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_liquidity = 349;
++
++        assert!(!treasury.liquidity_accounting_is_valid());
++    }
++
++    #[test]
++    fn liquidity_accounting_fails_closed_on_overflow() {
++        let mut treasury = valid_treasury();
++
++        treasury.pending_liquidity = u64::MAX;
++        treasury.released_liquidity = 1;
++        treasury.lifetime_liquidity = 0;
++
++        assert!(!treasury.liquidity_accounting_is_valid());
++    }
++
++    #[test]
++    fn company_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
++        let treasury = valid_treasury();
++
++        assert!(treasury.company_accounting_is_valid());
++    }
++
++    #[test]
++    fn company_accounting_is_invalid_when_values_do_not_balance() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_company = 499;
++
++        assert!(!treasury.company_accounting_is_valid());
++    }
++
++    #[test]
++    fn company_accounting_fails_closed_on_overflow() {
++        let mut treasury = valid_treasury();
++
++        treasury.pending_company = u64::MAX;
++        treasury.released_company = 1;
++        treasury.lifetime_company = 0;
++
++        assert!(!treasury.company_accounting_is_valid());
++    }
++
++    #[test]
++    fn founder_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
++        let treasury = valid_treasury();
++
++        assert!(treasury.founder_accounting_is_valid());
++    }
++
++    #[test]
++    fn founder_accounting_is_invalid_when_values_do_not_balance() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_founder = 99;
++
++        assert!(!treasury.founder_accounting_is_valid());
++    }
++
++    #[test]
++    fn founder_accounting_fails_closed_on_overflow() {
++        let mut treasury = valid_treasury();
++
++        treasury.pending_founder = u64::MAX;
++        treasury.released_founder = 1;
++        treasury.lifetime_founder = 0;
++
++        assert!(!treasury.founder_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_valid_when_every_bucket_balances() {
++        let treasury = valid_treasury();
++
++        assert!(treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_invalid_when_reserve_is_corrupted() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_reserve += 1;
++
++        assert!(!treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_invalid_when_buyback_is_corrupted() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_buyback_burn += 1;
++
++        assert!(!treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_invalid_when_liquidity_is_corrupted() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_liquidity += 1;
++
++        assert!(!treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_invalid_when_company_is_corrupted() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_company += 1;
++
++        assert!(!treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_invalid_when_founder_is_corrupted() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_founder += 1;
++
++        assert!(!treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn execution_accounting_is_invalid_when_multiple_buckets_are_corrupted() {
++        let mut treasury = valid_treasury();
++
++        treasury.lifetime_reserve += 1;
++        treasury.lifetime_liquidity += 1;
++        treasury.lifetime_founder += 1;
++
++        assert!(!treasury.execution_accounting_is_valid());
++    }
++
++    #[test]
++    fn zero_balances_are_valid_accounting() {
++        let mut treasury = valid_treasury();
++
++        treasury.pending_reserve = 0;
++        treasury.pending_buyback_burn = 0;
++        treasury.pending_liquidity = 0;
++        treasury.pending_company = 0;
++        treasury.pending_founder = 0;
++
++        treasury.lifetime_reserve = 0;
++        treasury.lifetime_buyback_burn = 0;
++        treasury.lifetime_liquidity = 0;
++        treasury.lifetime_company = 0;
++        treasury.lifetime_founder = 0;
++
++        treasury.released_reserve = 0;
++        treasury.released_buyback_burn = 0;
++        treasury.released_liquidity = 0;
++        treasury.released_company = 0;
++        treasury.released_founder = 0;
++
++        assert!(treasury.execution_accounting_is_valid());
++    }
++}
+diff --git a/tests/rbvr_protocol.ts b/tests/rbvr_protocol.ts
+index 042bc1f..36a12ac 100644
+--- a/tests/rbvr_protocol.ts
++++ b/tests/rbvr_protocol.ts
+@@ -7,11 +7,7 @@ import {
+   mintTo,
+   TOKEN_PROGRAM_ID,
+ } from "@solana/spl-token";
+-import {
+-  Keypair,
+-  PublicKey,
+-  SystemProgram,
+-} from "@solana/web3.js";
++import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
+ import assert from "node:assert/strict";
+ 
+ import { TreasuryRouter } from "../target/types/treasury_router";
+@@ -22,14 +18,13 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   const provider = anchor.AnchorProvider.env();
+   anchor.setProvider(provider);
+ 
+-  const program = anchor.workspace
+-    .TreasuryRouter as Program<TreasuryRouter>;
++  const program = anchor.workspace.TreasuryRouter as Program<TreasuryRouter>;
+ 
+   const authority = provider.wallet.publicKey;
+   const payer = (provider.wallet as anchor.Wallet).payer;
+ 
+   const PROGRAM_ID = new PublicKey(
+-    "5mEQEoksSyTMJifw88UWGna81bY6ghWPJqHNFfDWcYD3"
++    "5mEQEoksSyTMJifw88UWGna81bY6ghWPJqHNFfDWcYD3",
+   );
+ 
+   const DEPOSIT_AMOUNT = new anchor.BN(1_000_000);
+@@ -49,6 +44,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   let settlementVaultPda: PublicKey;
+   let founderStatePda: PublicKey;
+   let companyStatePda: PublicKey;
++  let executionConfigPda: PublicKey;
+ 
+   let founderDestination: PublicKey;
+   let companyDestination: PublicKey;
+@@ -69,89 +65,65 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   function assertBn(
+     actual: anchor.BN,
+     expected: anchor.BN | number,
+-    message: string = ""
++    message: string = "",
+   ): void {
+     const expectedBn =
+-      expected instanceof anchor.BN
+-        ? expected
+-        : new anchor.BN(expected);
++      expected instanceof anchor.BN ? expected : new anchor.BN(expected);
+ 
+-    assert.equal(
+-      actual.toString(),
+-      expectedBn.toString(),
+-      message
+-    );
++    assert.equal(actual.toString(), expectedBn.toString(), message);
+   }
+ 
+   function derivePdas(): void {
+-    [protocolStatePda] =
+-      PublicKey.findProgramAddressSync(
+-        [Buffer.from("protocol")],
+-        PROGRAM_ID
+-      );
++    [protocolStatePda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("protocol")],
++      PROGRAM_ID,
++    );
+ 
+-    [protocolConfigPda] =
+-      PublicKey.findProgramAddressSync(
+-        [
+-          Buffer.from("protocol-config"),
+-          protocolStatePda.toBuffer(),
+-        ],
+-        PROGRAM_ID
+-      );
+-
+-    [treasuryStatePda] =
+-      PublicKey.findProgramAddressSync(
+-        [
+-          Buffer.from("treasury"),
+-          protocolStatePda.toBuffer(),
+-        ],
+-        PROGRAM_ID
+-      );
+-
+-    [settlementVaultPda] =
+-      PublicKey.findProgramAddressSync(
+-        [
+-          Buffer.from("treasury-vault"),
+-          treasuryStatePda.toBuffer(),
+-        ],
+-        PROGRAM_ID
+-      );
+-
+-    [founderStatePda] =
+-      PublicKey.findProgramAddressSync(
+-        [
+-          Buffer.from("founder-state"),
+-          protocolStatePda.toBuffer(),
+-        ],
+-        PROGRAM_ID
+-      );
+-
+-    [companyStatePda] =
+-      PublicKey.findProgramAddressSync(
+-        [
+-          Buffer.from("company-state"),
+-          protocolStatePda.toBuffer(),
+-        ],
+-        PROGRAM_ID
+-      );
++    [protocolConfigPda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("protocol-config"), protocolStatePda.toBuffer()],
++      PROGRAM_ID,
++    );
++
++    [treasuryStatePda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("treasury"), protocolStatePda.toBuffer()],
++      PROGRAM_ID,
++    );
++
++    [settlementVaultPda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("treasury-vault"), treasuryStatePda.toBuffer()],
++      PROGRAM_ID,
++    );
++
++    [founderStatePda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("founder-state"), protocolStatePda.toBuffer()],
++      PROGRAM_ID,
++    );
++
++    [companyStatePda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("company-state"), protocolStatePda.toBuffer()],
++      PROGRAM_ID,
++    );
++
++    [executionConfigPda] = PublicKey.findProgramAddressSync(
++      [Buffer.from("execution-config"), protocolStatePda.toBuffer()],
++      PROGRAM_ID,
++    );
+   }
+ 
+   async function treasury() {
+-    return program.account.treasuryState.fetch(
+-      treasuryStatePda
+-    );
++    return program.account.treasuryState.fetch(treasuryStatePda);
+   }
+ 
+   function assertBucketInvariant(
+     pending: anchor.BN,
+     released: anchor.BN,
+     lifetime: anchor.BN,
+-    bucket: string
++    bucket: string,
+   ): void {
+     assertBn(
+       pending.add(released),
+       lifetime,
+-      `${bucket}: pending + released must equal lifetime`
++      `${bucket}: pending + released must equal lifetime`,
+     );
+   }
+ 
+@@ -162,35 +134,35 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       state.pendingReserve,
+       state.releasedReserve,
+       state.lifetimeReserve,
+-      "reserve"
++      "reserve",
+     );
+ 
+     assertBucketInvariant(
+       state.pendingBuybackBurn,
+       state.releasedBuybackBurn,
+       state.lifetimeBuybackBurn,
+-      "buyback"
++      "buyback",
+     );
+ 
+     assertBucketInvariant(
+       state.pendingLiquidity,
+       state.releasedLiquidity,
+       state.lifetimeLiquidity,
+-      "liquidity"
++      "liquidity",
+     );
+ 
+     assertBucketInvariant(
+       state.pendingCompany,
+       state.releasedCompany,
+       state.lifetimeCompany,
+-      "company"
++      "company",
+     );
+ 
+     assertBucketInvariant(
+       state.pendingFounder,
+       state.releasedFounder,
+       state.lifetimeFounder,
+-      "founder"
++      "founder",
+     );
+ 
+     const lifetimeTotal = state.lifetimeReserve
+@@ -202,14 +174,12 @@ describe("RBVR Treasury Router — protocol integration", function () {
+     assertBn(
+       lifetimeTotal,
+       state.totalFeesAllocated,
+-      "sum of lifetime buckets must equal total fees allocated"
++      "sum of lifetime buckets must equal total fees allocated",
+     );
+ 
+     assert(
+-      state.totalFeesAllocated.lte(
+-        state.totalFeesReceived
+-      ),
+-      "allocated fees cannot exceed received fees"
++      state.totalFeesAllocated.lte(state.totalFeesReceived),
++      "allocated fees cannot exceed received fees",
+     );
+   }
+ 
+@@ -217,7 +187,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+     assert.equal(
+       program.programId.toBase58(),
+       PROGRAM_ID.toBase58(),
+-      "workspace program ID does not match locked RBVR program ID"
++      "workspace program ID does not match locked RBVR program ID",
+     );
+ 
+     derivePdas();
+@@ -227,16 +197,15 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       payer,
+       authority,
+       null,
+-      6
++      6,
+     );
+ 
+-    const sourceAta =
+-      await getOrCreateAssociatedTokenAccount(
+-        provider.connection,
+-        payer,
+-        settlementMint,
+-        authority
+-      );
++    const sourceAta = await getOrCreateAssociatedTokenAccount(
++      provider.connection,
++      payer,
++      settlementMint,
++      authority,
++    );
+ 
+     sourceTokenAccount = sourceAta.address;
+ 
+@@ -245,7 +214,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         provider.connection,
+         payer,
+         settlementMint,
+-        founderRecipientOwner.publicKey
++        founderRecipientOwner.publicKey,
+       )
+     ).address;
+ 
+@@ -254,7 +223,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         provider.connection,
+         payer,
+         settlementMint,
+-        companyRecipientOwner.publicKey
++        companyRecipientOwner.publicKey,
+       )
+     ).address;
+ 
+@@ -263,7 +232,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         provider.connection,
+         payer,
+         settlementMint,
+-        reserveRecipientOwner.publicKey
++        reserveRecipientOwner.publicKey,
+       )
+     ).address;
+ 
+@@ -272,7 +241,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         provider.connection,
+         payer,
+         settlementMint,
+-        liquidityRecipientOwner.publicKey
++        liquidityRecipientOwner.publicKey,
+       )
+     ).address;
+ 
+@@ -281,7 +250,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         provider.connection,
+         payer,
+         settlementMint,
+-        buybackRecipientOwner.publicKey
++        buybackRecipientOwner.publicKey,
+       )
+     ).address;
+ 
+@@ -291,7 +260,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       settlementMint,
+       sourceTokenAccount,
+       authority,
+-      BigInt(DEPOSIT_AMOUNT.toString())
++      BigInt(DEPOSIT_AMOUNT.toString()),
+     );
+   });
+ 
+@@ -300,19 +269,13 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       protocolStatePda.toBase58(),
+       PublicKey.findProgramAddressSync(
+         [Buffer.from("protocol")],
+-        PROGRAM_ID
+-      )[0].toBase58()
++        PROGRAM_ID,
++      )[0].toBase58(),
+     );
+ 
+-    assert.notEqual(
+-      protocolConfigPda.toBase58(),
+-      treasuryStatePda.toBase58()
+-    );
++    assert.notEqual(protocolConfigPda.toBase58(), treasuryStatePda.toBase58());
+ 
+-    assert.notEqual(
+-      founderStatePda.toBase58(),
+-      companyStatePda.toBase58()
+-    );
++    assert.notEqual(founderStatePda.toBase58(), companyStatePda.toBase58());
+   });
+ 
+   it("initializes the protocol state", async () => {
+@@ -325,15 +288,9 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       })
+       .rpc();
+ 
+-    const state =
+-      await program.account.protocolState.fetch(
+-        protocolStatePda
+-      );
++    const state = await program.account.protocolState.fetch(protocolStatePda);
+ 
+-    assert.equal(
+-      state.authority.toBase58(),
+-      authority.toBase58()
+-    );
++    assert.equal(state.authority.toBase58(), authority.toBase58());
+ 
+     assert.equal(state.paused, false);
+   });
+@@ -350,9 +307,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       .rpc();
+ 
+     const config =
+-      await program.account.protocolConfig.fetch(
+-        protocolConfigPda
+-      );
++      await program.account.protocolConfig.fetch(protocolConfigPda);
+ 
+     assert.equal(config.reserveBps, 3000);
+     assert.equal(config.buybackBurnBps, 2000);
+@@ -366,17 +321,15 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         config.liquidityBps +
+         config.companyBps +
+         config.founderBps,
+-      10_000
++      10_000,
+     );
+ 
+     const protocol =
+-      await program.account.protocolState.fetch(
+-        protocolStatePda
+-      );
++      await program.account.protocolState.fetch(protocolStatePda);
+ 
+     assert.equal(
+       protocol.protocolConfig.toBase58(),
+-      protocolConfigPda.toBase58()
++      protocolConfigPda.toBase58(),
+     );
+   });
+ 
+@@ -396,33 +349,21 @@ describe("RBVR Treasury Router — protocol integration", function () {
+ 
+     const state = await treasury();
+ 
+-    assert.equal(
+-      state.protocol.toBase58(),
+-      protocolStatePda.toBase58()
+-    );
++    assert.equal(state.protocol.toBase58(), protocolStatePda.toBase58());
+ 
+-    assert.equal(
+-      state.settlementMint.toBase58(),
+-      settlementMint.toBase58()
+-    );
++    assert.equal(state.settlementMint.toBase58(), settlementMint.toBase58());
+ 
+     assert.equal(
+       state.settlementVault.toBase58(),
+-      settlementVaultPda.toBase58()
++      settlementVaultPda.toBase58(),
+     );
+ 
+     assertBn(state.totalFeesReceived, 0);
+     assertBn(state.totalFeesAllocated, 0);
+ 
+-    const vault = await getAccount(
+-      provider.connection,
+-      settlementVaultPda
+-    );
++    const vault = await getAccount(provider.connection, settlementVaultPda);
+ 
+-    assert.equal(
+-      vault.owner.toBase58(),
+-      treasuryStatePda.toBase58()
+-    );
++    assert.equal(vault.owner.toBase58(), treasuryStatePda.toBase58());
+   });
+ 
+   it("initializes founder compensation controls", async () => {
+@@ -430,7 +371,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       .initializeFounder(
+         founderRecipientOwner.publicKey,
+         FOUNDER_CAP,
+-        PERIOD_DURATION
++        PERIOD_DURATION,
+       )
+       .accountsPartial({
+         protocolState: protocolStatePda,
+@@ -440,22 +381,16 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       })
+       .rpc();
+ 
+-    const founder =
+-      await program.account.founderState.fetch(
+-        founderStatePda
+-      );
++    const founder = await program.account.founderState.fetch(founderStatePda);
+ 
+     assert.equal(
+       founder.recipient.toBase58(),
+       founderRecipientOwner.publicKey.toBase58(),
+-      "founder recipient must be the owner of the destination token account"
++      "founder recipient must be the owner of the destination token account",
+     );
+ 
+     assertBn(founder.periodCap, FOUNDER_CAP);
+-    assertBn(
+-      founder.periodDuration,
+-      PERIOD_DURATION
+-    );
++    assertBn(founder.periodDuration, PERIOD_DURATION);
+     assert.equal(founder.enabled, true);
+   });
+ 
+@@ -464,7 +399,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       .initializeCompany(
+         companyRecipientOwner.publicKey,
+         COMPANY_CAP,
+-        PERIOD_DURATION
++        PERIOD_DURATION,
+       )
+       .accountsPartial({
+         protocolState: protocolStatePda,
+@@ -474,29 +409,23 @@ describe("RBVR Treasury Router — protocol integration", function () {
+       })
+       .rpc();
+ 
+-    const company =
+-      await program.account.companyState.fetch(
+-        companyStatePda
+-      );
++    const company = await program.account.companyState.fetch(companyStatePda);
+ 
+     assert.equal(
+       company.recipient.toBase58(),
+       companyRecipientOwner.publicKey.toBase58(),
+-      "company recipient must be the owner of the destination token account"
++      "company recipient must be the owner of the destination token account",
+     );
+ 
+     assertBn(company.periodCap, COMPANY_CAP);
+-    assertBn(
+-      company.periodDuration,
+-      PERIOD_DURATION
+-    );
++    assertBn(company.periodDuration, PERIOD_DURATION);
+     assert.equal(company.enabled, true);
+   });
+ 
+   it("deposits settlement assets into the treasury vault", async () => {
+     const sourceBefore = await getAccount(
+       provider.connection,
+-      sourceTokenAccount
++      sourceTokenAccount,
+     );
+ 
+     await program.methods
+@@ -514,23 +443,20 @@ describe("RBVR Treasury Router — protocol integration", function () {
+ 
+     const sourceAfter = await getAccount(
+       provider.connection,
+-      sourceTokenAccount
++      sourceTokenAccount,
+     );
+ 
+     const vaultAfter = await getAccount(
+       provider.connection,
+-      settlementVaultPda
++      settlementVaultPda,
+     );
+ 
+     assert.equal(
+       sourceBefore.amount - sourceAfter.amount,
+-      BigInt(DEPOSIT_AMOUNT.toString())
++      BigInt(DEPOSIT_AMOUNT.toString()),
+     );
+ 
+-    assert.equal(
+-      vaultAfter.amount,
+-      BigInt(DEPOSIT_AMOUNT.toString())
+-    );
++    assert.equal(vaultAfter.amount, BigInt(DEPOSIT_AMOUNT.toString()));
+ 
+     /*
+      * depositSettlement transfers settlement tokens into the vault.
+@@ -539,16 +465,72 @@ describe("RBVR Treasury Router — protocol integration", function () {
+      */
+   });
+ 
++  it("initializes the execution config", async () => {
++    await program.methods
++      .initializeExecutionConfig()
++      .accountsPartial({
++        protocolState: protocolStatePda,
++        treasury: treasuryStatePda,
++        founderState: founderStatePda,
++        companyState: companyStatePda,
++        settlementMint,
++        settlementVault: settlementVaultPda,
++        reserveDestination,
++        buybackDestination,
++        liquidityDestination,
++        companyDestination,
++        founderDestination,
++        executionConfig: executionConfigPda,
++        authority,
++        systemProgram: SystemProgram.programId,
++      })
++      .rpc();
++
++    const config =
++      await program.account.executionConfig.fetch(executionConfigPda);
++
++    assert.equal(config.protocolState.toBase58(), protocolStatePda.toBase58());
++
++    assert.equal(config.settlementMint.toBase58(), settlementMint.toBase58());
++
++    assert.equal(
++      config.reserveDestination.toBase58(),
++      reserveDestination.toBase58(),
++    );
++
++    assert.equal(
++      config.buybackDestination.toBase58(),
++      buybackDestination.toBase58(),
++    );
++
++    assert.equal(
++      config.liquidityDestination.toBase58(),
++      liquidityDestination.toBase58(),
++    );
++
++    assert.equal(
++      config.companyDestination.toBase58(),
++      companyDestination.toBase58(),
++    );
++
++    assert.equal(
++      config.founderDestination.toBase58(),
++      founderDestination.toBase58(),
++    );
++
++    assert.equal(config.version, 1);
++  });
++
+   it("processes fees using the locked 30/20/20/20/10 model", async () => {
+     await program.methods
+-      .processFees(PROCESS_AMOUNT)
++      .processFees()
+       .accountsPartial({
+         protocolState: protocolStatePda,
+         protocolConfig: protocolConfigPda,
+         treasury: treasuryStatePda,
+         founderState: founderStatePda,
+         companyState: companyStatePda,
+-        authority,
++        settlementVault: settlementVaultPda,
+       })
+       .rpc();
+ 
+@@ -563,10 +545,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+     assertBn(state.pendingFounder, 100_000);
+ 
+     assertBn(state.lifetimeReserve, 300_000);
+-    assertBn(
+-      state.lifetimeBuybackBurn,
+-      200_000
+-    );
++    assertBn(state.lifetimeBuybackBurn, 200_000);
+     assertBn(state.lifetimeLiquidity, 200_000);
+     assertBn(state.lifetimeCompany, 200_000);
+     assertBn(state.lifetimeFounder, 100_000);
+@@ -583,10 +562,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   });
+ 
+   it("authorizes and transfers the reserve allocation", async () => {
+-    const before = await getAccount(
+-      provider.connection,
+-      reserveDestination
+-    );
++    const before = await getAccount(provider.connection, reserveDestination);
+ 
+     await program.methods
+       .authorizeReserveExecution(EXECUTION_AMOUNT)
+@@ -596,19 +572,17 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         settlementMint,
+         settlementVault: settlementVaultPda,
+         reserveDestination,
++        executionConfig: executionConfigPda,
+         authority,
+         tokenProgram: TOKEN_PROGRAM_ID,
+       })
+       .rpc();
+ 
+-    const after = await getAccount(
+-      provider.connection,
+-      reserveDestination
+-    );
++    const after = await getAccount(provider.connection, reserveDestination);
+ 
+     assert.equal(
+       after.amount - before.amount,
+-      BigInt(EXECUTION_AMOUNT.toString())
++      BigInt(EXECUTION_AMOUNT.toString()),
+     );
+ 
+     const state = await treasury();
+@@ -620,34 +594,27 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   });
+ 
+   it("authorizes and transfers the liquidity allocation", async () => {
+-    const before = await getAccount(
+-      provider.connection,
+-      liquidityDestination
+-    );
++    const before = await getAccount(provider.connection, liquidityDestination);
+ 
+     await program.methods
+-      .authorizeLiquidityExecution(
+-        EXECUTION_AMOUNT
+-      )
++      .authorizeLiquidityExecution(EXECUTION_AMOUNT)
+       .accountsPartial({
+         protocolState: protocolStatePda,
+         treasury: treasuryStatePda,
+         settlementMint,
+         settlementVault: settlementVaultPda,
+         liquidityDestination,
++        executionConfig: executionConfigPda,
+         authority,
+         tokenProgram: TOKEN_PROGRAM_ID,
+       })
+       .rpc();
+ 
+-    const after = await getAccount(
+-      provider.connection,
+-      liquidityDestination
+-    );
++    const after = await getAccount(provider.connection, liquidityDestination);
+ 
+     assert.equal(
+       after.amount - before.amount,
+-      BigInt(EXECUTION_AMOUNT.toString())
++      BigInt(EXECUTION_AMOUNT.toString()),
+     );
+ 
+     const state = await treasury();
+@@ -659,15 +626,10 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   });
+ 
+   it("authorizes and transfers the company allocation", async () => {
+-    const before = await getAccount(
+-      provider.connection,
+-      companyDestination
+-    );
++    const before = await getAccount(provider.connection, companyDestination);
+ 
+     await program.methods
+-      .authorizeCompanyExecution(
+-        EXECUTION_AMOUNT
+-      )
++      .authorizeCompanyExecution(EXECUTION_AMOUNT)
+       .accountsPartial({
+         protocolState: protocolStatePda,
+         treasury: treasuryStatePda,
+@@ -675,19 +637,17 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         settlementMint,
+         settlementVault: settlementVaultPda,
+         companyDestination,
++        executionConfig: executionConfigPda,
+         authority,
+         tokenProgram: TOKEN_PROGRAM_ID,
+       })
+       .rpc();
+ 
+-    const after = await getAccount(
+-      provider.connection,
+-      companyDestination
+-    );
++    const after = await getAccount(provider.connection, companyDestination);
+ 
+     assert.equal(
+       after.amount - before.amount,
+-      BigInt(EXECUTION_AMOUNT.toString())
++      BigInt(EXECUTION_AMOUNT.toString()),
+     );
+ 
+     const state = await treasury();
+@@ -695,10 +655,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+     assertBn(state.pendingCompany, 190_000);
+     assertBn(state.releasedCompany, 10_000);
+ 
+-    const company =
+-      await program.account.companyState.fetch(
+-        companyStatePda
+-      );
++    const company = await program.account.companyState.fetch(companyStatePda);
+ 
+     assertBn(company.spentCurrentPeriod, 200_000);
+ 
+@@ -708,15 +665,10 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   });
+ 
+   it("authorizes and transfers founder compensation", async () => {
+-    const before = await getAccount(
+-      provider.connection,
+-      founderDestination
+-    );
++    const before = await getAccount(provider.connection, founderDestination);
+ 
+     await program.methods
+-      .authorizeFounderExecution(
+-        EXECUTION_AMOUNT
+-      )
++      .authorizeFounderExecution(EXECUTION_AMOUNT)
+       .accountsPartial({
+         protocolState: protocolStatePda,
+         treasury: treasuryStatePda,
+@@ -724,19 +676,17 @@ describe("RBVR Treasury Router — protocol integration", function () {
+         settlementMint,
+         settlementVault: settlementVaultPda,
+         founderDestination,
++        executionConfig: executionConfigPda,
+         authority,
+         tokenProgram: TOKEN_PROGRAM_ID,
+       })
+       .rpc();
+ 
+-    const after = await getAccount(
+-      provider.connection,
+-      founderDestination
+-    );
++    const after = await getAccount(provider.connection, founderDestination);
+ 
+     assert.equal(
+       after.amount - before.amount,
+-      BigInt(EXECUTION_AMOUNT.toString())
++      BigInt(EXECUTION_AMOUNT.toString()),
+     );
+ 
+     const state = await treasury();
+@@ -744,10 +694,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
+     assertBn(state.pendingFounder, 90_000);
+     assertBn(state.releasedFounder, 10_000);
+ 
+-    const founder =
+-      await program.account.founderState.fetch(
+-        founderStatePda
+-      );
++    const founder = await program.account.founderState.fetch(founderStatePda);
+ 
+     assertBn(founder.earnedCurrentPeriod, 100_000);
+ 
+@@ -757,47 +704,34 @@ describe("RBVR Treasury Router — protocol integration", function () {
+   });
+ 
+   it("authorizes and transfers the buyback allocation", async () => {
+-    const before = await getAccount(
+-      provider.connection,
+-      buybackDestination
+-    );
++    const before = await getAccount(provider.connection, buybackDestination);
+ 
+     await program.methods
+-      .authorizeBuybackExecution(
+-        EXECUTION_AMOUNT
+-      )
++      .authorizeBuybackExecution(EXECUTION_AMOUNT)
+       .accountsPartial({
+         protocolState: protocolStatePda,
+         treasury: treasuryStatePda,
+         settlementMint,
+         settlementVault: settlementVaultPda,
+         buybackDestination,
++        executionConfig: executionConfigPda,
+         authority,
+         tokenProgram: TOKEN_PROGRAM_ID,
+       })
+       .rpc();
+ 
+-    const after = await getAccount(
+-      provider.connection,
+-      buybackDestination
+-    );
++    const after = await getAccount(provider.connection, buybackDestination);
+ 
+     assert.equal(
+       after.amount - before.amount,
+-      BigInt(EXECUTION_AMOUNT.toString())
++      BigInt(EXECUTION_AMOUNT.toString()),
+     );
+ 
+     const state = await treasury();
+ 
+-    assertBn(
+-      state.pendingBuybackBurn,
+-      190_000
+-    );
++    assertBn(state.pendingBuybackBurn, 190_000);
+ 
+-    assertBn(
+-      state.releasedBuybackBurn,
+-      10_000
+-    );
++    assertBn(state.releasedBuybackBurn, 10_000);
+ 
+     await assertAllTreasuryInvariants();
+   });
+@@ -820,26 +754,17 @@ describe("RBVR Treasury Router — protocol integration", function () {
+     assertBn(totalPending, 950_000);
+     assertBn(totalReleased, 50_000);
+ 
+-    assertBn(
+-      totalPending.add(totalReleased),
+-      state.totalFeesAllocated
+-    );
++    assertBn(totalPending.add(totalReleased), state.totalFeesAllocated);
+ 
+-    const vault = await getAccount(
+-      provider.connection,
+-      settlementVaultPda
+-    );
++    const vault = await getAccount(provider.connection, settlementVaultPda);
+ 
+     assert.equal(
+       vault.amount,
+       BigInt(950_000),
+-      "vault token balance must equal total pending balance"
++      "vault token balance must equal total pending balance",
+     );
+ 
+-    assert(
+-      number(state.processingEpoch) >= 1,
+-      "processing epoch must advance"
+-    );
++    assert(number(state.processingEpoch) >= 1, "processing epoch must advance");
+ 
+     await assertAllTreasuryInvariants();
+   });
