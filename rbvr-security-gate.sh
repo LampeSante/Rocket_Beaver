@@ -49,7 +49,91 @@ pass_step "Rust tests"
 npm ci || fail "npm ci failed"
 pass_step "Locked Node dependencies"
 
-npm run test:integration || fail "Anchor integration tests failed"
+command -v solana-test-validator >/dev/null 2>&1 \
+  || fail "solana-test-validator is not installed or not in PATH"
+
+LEDGER_DIR="$ROOT/.rbvr-test-ledger"
+VALIDATOR_LOG="$ROOT/.rbvr-test-validator.log"
+RPC_URL="http://127.0.0.1:8899"
+
+cleanup_validator() {
+  if [[ -n "${VALIDATOR_PID:-}" ]] && kill -0 "$VALIDATOR_PID" 2>/dev/null; then
+    kill "$VALIDATOR_PID" 2>/dev/null || true
+    wait "$VALIDATOR_PID" 2>/dev/null || true
+  fi
+
+  rm -rf "$LEDGER_DIR"
+}
+
+trap cleanup_validator EXIT INT TERM
+
+# Prevent any validator already using the test RPC port from contaminating tests.
+if command -v fuser >/dev/null 2>&1; then
+  fuser -k 8899/tcp >/dev/null 2>&1 || true
+else
+  pkill -f solana-test-validator 2>/dev/null || true
+fi
+
+sleep 1
+
+rm -rf "$LEDGER_DIR"
+rm -f "$VALIDATOR_LOG"
+
+solana-test-validator \
+  --reset \
+  --ledger "$LEDGER_DIR" \
+  --rpc-port 8899 \
+  >"$VALIDATOR_LOG" 2>&1 &
+
+VALIDATOR_PID=$!
+
+for _ in {1..30}; do
+  if solana cluster-version --url "$RPC_URL" >/dev/null 2>&1; then
+    break
+  fi
+
+  if ! kill -0 "$VALIDATOR_PID" 2>/dev/null; then
+    cat "$VALIDATOR_LOG"
+    fail "Fresh local Solana validator exited during startup"
+  fi
+
+  sleep 1
+done
+
+solana cluster-version --url "$RPC_URL" >/dev/null 2>&1 || {
+  cat "$VALIDATOR_LOG"
+  fail "Fresh local Solana validator did not become ready"
+}
+
+# Confirm the process launched by this script owns the test environment.
+kill -0 "$VALIDATOR_PID" 2>/dev/null \
+  || fail "Validator PID is not active after startup"
+
+# A clean ledger must not contain the locked RBVR program before deployment.
+if solana program show \
+  5mEQEoksSyTMJifw88UWGna81bY6ghWPJqHNFfDWcYD3 \
+  --url "$RPC_URL" >/dev/null 2>&1; then
+  cat "$VALIDATOR_LOG"
+  fail "RBVR program already exists before deployment; validator state is not clean"
+fi
+
+anchor build || fail "Anchor build failed"
+
+anchor deploy \
+  --provider.cluster "$RPC_URL" \
+  || {
+    cat "$VALIDATOR_LOG"
+    fail "Local program deployment failed"
+  }
+
+ANCHOR_PROVIDER_URL="$RPC_URL" \
+ANCHOR_WALLET="/home/alec_elliott/rocket-beaver-dev/keys/local-deployment.json" \
+npm run test:integration \
+  || {
+    cat "$VALIDATOR_LOG"
+    fail "Anchor integration tests failed"
+  }
+
 pass_step "Anchor integration tests"
 
 python3 scripts/validate-architecture.py || fail "Architecture validation failed"

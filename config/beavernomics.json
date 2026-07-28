@@ -23,3 +23,5 @@
     "burnImmediately": true,
     "minimumExecutionLamports": 1000000,
     "maximumSlippageBps": 300
+  }
+}
