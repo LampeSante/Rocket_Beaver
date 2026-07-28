@@ -1,3 +1,4 @@
+import { assert } from "chai";
 import * as anchor from "@anchor-lang/core";
 import { Program } from "@anchor-lang/core";
 import {
@@ -8,9 +9,8 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import type { TreasuryRouter } from "../target/types/treasury_router";
+import { TreasuryRouter } from "../target/types/treasury_router";
 
-import { assert } from "chai";
 describe("RBVR Treasury Router — protocol integration", function () {
   this.timeout(1_000_000);
 
@@ -299,7 +299,6 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .initializeProtocolConfig()
       .accountsPartial({
         protocolState: protocolStatePda,
-        protocolConfig: protocolConfigPda,
         authority,
         systemProgram: SystemProgram.programId,
       })
@@ -402,7 +401,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
       )
       .accountsPartial({
         protocolState: protocolStatePda,
-        companyState: companyStatePda,
+        founderState: founderStatePda,
         authority,
         systemProgram: SystemProgram.programId,
       })
@@ -471,7 +470,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
         protocolState: protocolStatePda,
         treasury: treasuryStatePda,
         founderState: founderStatePda,
-        companyState: companyStatePda,
+        founderState: founderStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
         reserveDestination,
@@ -525,10 +524,9 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .processFees()
       .accountsPartial({
         protocolState: protocolStatePda,
-        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
         founderState: founderStatePda,
-        companyState: companyStatePda,
+        founderState: founderStatePda,
         settlementVault: settlementVaultPda,
       })
       .rpc();
@@ -579,10 +577,9 @@ describe("RBVR Treasury Router — protocol integration", function () {
         .authorizeReserveExecution(EXECUTION_AMOUNT)
         .accountsPartial({
           protocolState: protocolStatePda,
-          protocolConfig: protocolConfigPda,
           treasury: treasuryStatePda,
           founderState: founderStatePda,
-          companyState: companyStatePda,
+          founderState: founderStatePda,
           settlementMint,
           settlementVault: settlementVaultPda,
 
@@ -659,10 +656,9 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeReserveExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
         founderState: founderStatePda,
-        companyState: companyStatePda,
+        founderState: founderStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
         reserveDestination,
@@ -698,10 +694,9 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeLiquidityExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
         founderState: founderStatePda,
-        companyState: companyStatePda,
+        founderState: founderStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
         reserveDestination,
@@ -737,13 +732,18 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeCompanyExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        companyState: companyStatePda,
         treasury: treasuryStatePda,
-        executionConfig: executionConfigPda,
+        founderState: founderStatePda,
+        founderState: founderStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
+        reserveDestination,
+        buybackDestination,
+        liquidityDestination,
         companyDestination,
-        authority: payer.publicKey,
+        founderDestination,
+        executionConfig: executionConfigPda,
+        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
@@ -776,13 +776,18 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeFounderExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        founderState: founderStatePda,
         treasury: treasuryStatePda,
-        executionConfig: executionConfigPda,
+        founderState: founderStatePda,
+        founderState: founderStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
+        reserveDestination,
+        buybackDestination,
+        liquidityDestination,
+        companyDestination,
         founderDestination,
-        authority: payer.publicKey,
+        executionConfig: executionConfigPda,
+        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
@@ -815,10 +820,9 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeBuybackExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
         founderState: founderStatePda,
-        companyState: companyStatePda,
+        founderState: founderStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
         reserveDestination,

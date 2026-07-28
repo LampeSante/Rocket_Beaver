@@ -18,17 +18,17 @@ pub struct FounderAllocation {
 /// Rules:
 ///
 /// - If founder rewards are disabled:
-///     100% goes to Liquidity.
+///   100% goes to Liquidity.
 ///
 /// - If the accounting period has expired:
-///     automatically reset.
+///   automatically reset.
 ///
 /// - If the requested amount is below the remaining cap:
-///     founder receives everything.
+///   founder receives everything.
 ///
 /// - If the cap would be exceeded:
-///     founder receives only the remaining allowance,
-///     with the excess redirected to Liquidity.
+///   founder receives only the remaining allowance,
+///   with the excess redirected to Liquidity.
 ///
 pub fn allocate(founder: &mut FounderState, requested: u64, now: i64) -> Result<FounderAllocation> {
     //

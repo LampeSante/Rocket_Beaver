@@ -8,9 +8,10 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import type { TreasuryRouter } from "../target/types/treasury_router";
+import assert from "node:assert/strict";
 
-import { assert } from "chai";
+import { TreasuryRouter } from "../target/types/treasury_router";
+
 describe("RBVR Treasury Router — protocol integration", function () {
   this.timeout(1_000_000);
 
@@ -737,13 +738,19 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeCompanyExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        companyState: companyStatePda,
+        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
-        executionConfig: executionConfigPda,
+        founderState: founderStatePda,
+        companyState: companyStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
+        reserveDestination,
+        buybackDestination,
+        liquidityDestination,
         companyDestination,
-        authority: payer.publicKey,
+        founderDestination,
+        executionConfig: executionConfigPda,
+        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
@@ -776,13 +783,19 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeFounderExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        founderState: founderStatePda,
+        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
-        executionConfig: executionConfigPda,
+        founderState: founderStatePda,
+        companyState: companyStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
+        reserveDestination,
+        buybackDestination,
+        liquidityDestination,
+        companyDestination,
         founderDestination,
-        authority: payer.publicKey,
+        executionConfig: executionConfigPda,
+        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();

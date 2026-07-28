@@ -1,5 +1,5 @@
-import * as anchor from "@anchor-lang/core";
-import { Program } from "@anchor-lang/core";
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
 import {
   createMint,
   getAccount,
@@ -8,9 +8,10 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
-import type { TreasuryRouter } from "../target/types/treasury_router";
+import assert from "node:assert/strict";
 
-import { assert } from "chai";
+import { TreasuryRouter } from "../target/types/treasury_router";
+
 describe("RBVR Treasury Router — protocol integration", function () {
   this.timeout(1_000_000);
 
@@ -560,98 +561,6 @@ describe("RBVR Treasury Router — protocol integration", function () {
     await assertAllTreasuryInvariants();
   });
 
-  it("rejects duplicate execution destinations through the Integrity Firewall", async () => {
-    const treasuryBefore = await treasury();
-    const vaultBefore = await getAccount(
-      provider.connection,
-      settlementVaultPda,
-    );
-    const reserveBefore = await getAccount(
-      provider.connection,
-      reserveDestination,
-    );
-
-    let rejected = false;
-    let failureText = "";
-
-    try {
-      await program.methods
-        .authorizeReserveExecution(EXECUTION_AMOUNT)
-        .accountsPartial({
-          protocolState: protocolStatePda,
-          protocolConfig: protocolConfigPda,
-          treasury: treasuryStatePda,
-          founderState: founderStatePda,
-          companyState: companyStatePda,
-          settlementMint,
-          settlementVault: settlementVaultPda,
-
-          // Deliberate architecture violation:
-          // Reserve and Buyback point to the same token account.
-          reserveDestination,
-          buybackDestination: reserveDestination,
-
-          liquidityDestination,
-          companyDestination,
-          founderDestination,
-          executionConfig: executionConfigPda,
-          authority,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .rpc();
-    } catch (error) {
-      rejected = true;
-      failureText =
-        error instanceof Error
-          ? `${error.message}\n${error.stack ?? ""}`
-          : String(error);
-    }
-
-    assert.isTrue(rejected, "Duplicate destinations must be rejected");
-
-    assert.match(
-      failureText,
-      /IntegrityFirewallViolation|Integrity Firewall|integrity firewall/i,
-      `Unexpected rejection: ${failureText}`,
-    );
-
-    const treasuryAfter = await treasury();
-    const vaultAfter = await getAccount(
-      provider.connection,
-      settlementVaultPda,
-    );
-    const reserveAfter = await getAccount(
-      provider.connection,
-      reserveDestination,
-    );
-
-    assert.equal(
-      vaultAfter.amount.toString(),
-      vaultBefore.amount.toString(),
-      "Failed firewall transaction changed the treasury vault balance",
-    );
-
-    assert.equal(
-      reserveAfter.amount.toString(),
-      reserveBefore.amount.toString(),
-      "Failed firewall transaction changed the reserve destination balance",
-    );
-
-    assert.equal(
-      treasuryAfter.pendingReserve.toString(),
-      treasuryBefore.pendingReserve.toString(),
-      "Failed firewall transaction changed pending reserve accounting",
-    );
-
-    assert.equal(
-      treasuryAfter.releasedReserve.toString(),
-      treasuryBefore.releasedReserve.toString(),
-      "Failed firewall transaction changed released reserve accounting",
-    );
-
-    await assertAllTreasuryInvariants();
-  });
-
   it("authorizes and transfers the reserve allocation", async () => {
     const before = await getAccount(provider.connection, reserveDestination);
 
@@ -737,13 +646,19 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeCompanyExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        companyState: companyStatePda,
+        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
-        executionConfig: executionConfigPda,
+        founderState: founderStatePda,
+        companyState: companyStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
+        reserveDestination,
+        buybackDestination,
+        liquidityDestination,
         companyDestination,
-        authority: payer.publicKey,
+        founderDestination,
+        executionConfig: executionConfigPda,
+        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
@@ -776,13 +691,19 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .authorizeFounderExecution(EXECUTION_AMOUNT)
       .accountsPartial({
         protocolState: protocolStatePda,
-        founderState: founderStatePda,
+        protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
-        executionConfig: executionConfigPda,
+        founderState: founderStatePda,
+        companyState: companyStatePda,
         settlementMint,
         settlementVault: settlementVaultPda,
+        reserveDestination,
+        buybackDestination,
+        liquidityDestination,
+        companyDestination,
         founderDestination,
-        authority: payer.publicKey,
+        executionConfig: executionConfigPda,
+        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();

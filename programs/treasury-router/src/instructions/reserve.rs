@@ -2,11 +2,21 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 
 use crate::{
-    constants::{PROTOCOL_SEED, TREASURY_SEED},
-    engines::execution_guard::{authorize_release, ReleaseBucket},
+    constants::{
+        COMPANY_STATE_SEED, EXECUTION_CONFIG_SEED, FOUNDER_STATE_SEED, PROTOCOL_CONFIG_SEED,
+        PROTOCOL_SEED, TREASURY_SEED,
+    },
+    engines::{
+        execution_guard::{authorize_release, ReleaseBucket},
+        integrity_firewall::{
+            evaluate_integrity, IntegrityAccountKeys, IntegrityDestinations, TokenAccountFacts,
+        },
+    },
     errors::TreasuryRouterError,
     events::ReserveExecutionAuthorized,
-    state::{ProtocolState, TreasuryState},
+    state::{
+        CompanyState, ExecutionConfig, FounderState, ProtocolConfig, ProtocolState, TreasuryState,
+    },
 };
 
 #[derive(Accounts)]
@@ -23,6 +33,45 @@ pub struct AuthorizeReserveExecution<'info> {
     pub protocol_state: Box<Account<'info, ProtocolState>>,
 
     #[account(
+        seeds = [
+            PROTOCOL_CONFIG_SEED,
+            protocol_state.key().as_ref()
+        ],
+        bump = protocol_config.bump,
+        constraint = protocol_state.protocol_config == protocol_config.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = protocol_config.protocol == protocol_state.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub protocol_config: Box<Account<'info, ProtocolConfig>>,
+
+    #[account(
+        seeds = [
+            FOUNDER_STATE_SEED,
+            protocol_state.key().as_ref()
+        ],
+        bump = founder_state.bump,
+        constraint = protocol_state.founder_state == founder_state.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = founder_state.protocol == protocol_state.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub founder_state: Box<Account<'info, FounderState>>,
+
+    #[account(
+        seeds = [
+            COMPANY_STATE_SEED,
+            protocol_state.key().as_ref()
+        ],
+        bump = company_state.bump,
+        constraint = protocol_state.company_state == company_state.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = company_state.protocol == protocol_state.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub company_state: Box<Account<'info, CompanyState>>,
+
+    #[account(
         mut,
         seeds = [
             TREASURY_SEED,
@@ -37,6 +86,19 @@ pub struct AuthorizeReserveExecution<'info> {
             @ TreasuryRouterError::InvalidSettlementVault
     )]
     pub treasury: Box<Account<'info, TreasuryState>>,
+
+    #[account(
+        seeds = [
+            EXECUTION_CONFIG_SEED,
+            protocol_state.key().as_ref()
+        ],
+        bump = execution_config.bump,
+        constraint = execution_config.protocol_state == protocol_state.key()
+            @ TreasuryRouterError::InvalidTreasuryProtocol,
+        constraint = execution_config.settlement_mint == settlement_mint.key()
+            @ TreasuryRouterError::InvalidSettlementMint
+    )]
+    pub execution_config: Box<Account<'info, ExecutionConfig>>,
 
     #[account(
         constraint = settlement_mint.key() == treasury.settlement_mint
@@ -58,12 +120,59 @@ pub struct AuthorizeReserveExecution<'info> {
     /// Reserve-controlled settlement-token account receiving the release.
     #[account(
         mut,
+        constraint = reserve_destination.key()
+            == execution_config.reserve_destination
+                @ TreasuryRouterError::InvalidExecutionDestination,
         constraint = reserve_destination.key() != settlement_vault.key()
             @ TreasuryRouterError::InvalidExecutionDestination,
         constraint = reserve_destination.mint == settlement_mint.key()
             @ TreasuryRouterError::InvalidSettlementMint
     )]
     pub reserve_destination: Box<Account<'info, TokenAccount>>,
+
+    /// Permanent buyback destination supplied read-only to the firewall.
+    #[account(
+        constraint = buyback_destination.key()
+            == execution_config.buyback_destination
+                @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = buyback_destination.mint == settlement_mint.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub buyback_destination: Box<Account<'info, TokenAccount>>,
+
+    /// Permanent liquidity destination supplied read-only to the firewall.
+    #[account(
+        constraint = liquidity_destination.key()
+            == execution_config.liquidity_destination
+                @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = liquidity_destination.mint == settlement_mint.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub liquidity_destination: Box<Account<'info, TokenAccount>>,
+
+    /// Permanent company destination supplied read-only to the firewall.
+    #[account(
+        constraint = company_destination.key()
+            == execution_config.company_destination
+                @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = company_destination.mint == settlement_mint.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = company_destination.owner == company_state.recipient
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub company_destination: Box<Account<'info, TokenAccount>>,
+
+    /// Permanent founder destination supplied read-only to the firewall.
+    #[account(
+        constraint = founder_destination.key()
+            == execution_config.founder_destination
+                @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = founder_destination.mint == settlement_mint.key()
+            @ TreasuryRouterError::IntegrityFirewallViolation,
+        constraint = founder_destination.owner == founder_state.recipient
+            @ TreasuryRouterError::IntegrityFirewallViolation
+    )]
+    pub founder_destination: Box<Account<'info, TokenAccount>>,
 
     pub authority: Signer<'info>,
 
@@ -80,14 +189,64 @@ pub struct AuthorizeReserveExecution<'info> {
 ///
 /// It does not allocate fees or modify lifetime reserve allocation.
 pub fn handler(ctx: Context<AuthorizeReserveExecution>, amount: u64) -> Result<()> {
-    require!(
-        !ctx.accounts.protocol_state.paused,
-        TreasuryRouterError::ProtocolPaused
+    let integrity_report = evaluate_integrity(
+        crate::ID,
+        IntegrityAccountKeys {
+            protocol: ctx.accounts.protocol_state.key(),
+            protocol_config: ctx.accounts.protocol_config.key(),
+            treasury: ctx.accounts.treasury.key(),
+            founder: ctx.accounts.founder_state.key(),
+            company: ctx.accounts.company_state.key(),
+            execution_config: ctx.accounts.execution_config.key(),
+        },
+        &ctx.accounts.protocol_state,
+        &ctx.accounts.protocol_config,
+        &ctx.accounts.treasury,
+        TokenAccountFacts {
+            key: ctx.accounts.settlement_vault.key(),
+            mint: ctx.accounts.settlement_vault.mint,
+            owner: ctx.accounts.settlement_vault.owner,
+        },
+        &ctx.accounts.founder_state,
+        &ctx.accounts.company_state,
+        &ctx.accounts.execution_config,
+        IntegrityDestinations {
+            reserve: TokenAccountFacts {
+                key: ctx.accounts.reserve_destination.key(),
+                mint: ctx.accounts.reserve_destination.mint,
+                owner: ctx.accounts.reserve_destination.owner,
+            },
+            buyback: TokenAccountFacts {
+                key: ctx.accounts.buyback_destination.key(),
+                mint: ctx.accounts.buyback_destination.mint,
+                owner: ctx.accounts.buyback_destination.owner,
+            },
+            liquidity: TokenAccountFacts {
+                key: ctx.accounts.liquidity_destination.key(),
+                mint: ctx.accounts.liquidity_destination.mint,
+                owner: ctx.accounts.liquidity_destination.owner,
+            },
+            company: TokenAccountFacts {
+                key: ctx.accounts.company_destination.key(),
+                mint: ctx.accounts.company_destination.mint,
+                owner: ctx.accounts.company_destination.owner,
+            },
+            founder: TokenAccountFacts {
+                key: ctx.accounts.founder_destination.key(),
+                mint: ctx.accounts.founder_destination.mint,
+                owner: ctx.accounts.founder_destination.owner,
+            },
+        },
     );
 
     require!(
-        ctx.accounts.treasury.execution_accounting_is_valid(),
-        TreasuryRouterError::AccountingInvariantViolation
+        integrity_report.healthy,
+        TreasuryRouterError::IntegrityFirewallViolation
+    );
+
+    msg!(
+        "Integrity Firewall passed with failure mask: {}",
+        integrity_report.failure_mask
     );
 
     let authorization = authorize_release(

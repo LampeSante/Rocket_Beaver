@@ -16,12 +16,16 @@ pub const FOUNDER_STATE_SEED: &[u8] = b"founder-state";
 /// Company module PDA seed.
 pub const COMPANY_STATE_SEED: &[u8] = b"company-state";
 
+/// Immutable execution routing configuration PDA.
+pub const EXECUTION_CONFIG_SEED: &[u8] = b"execution-config";
+
 /// Current on-chain state versions.
 pub const PROTOCOL_VERSION: u16 = 1;
 pub const PROTOCOL_CONFIG_VERSION: u16 = 1;
 pub const TREASURY_VERSION: u16 = 1;
 pub const FOUNDER_STATE_VERSION: u16 = 1;
 pub const COMPANY_STATE_VERSION: u16 = 1;
+pub const EXECUTION_CONFIG_VERSION: u16 = 1;
 
 /// Initial Dam Level: Building.
 pub const INITIAL_DAM_LEVEL: u8 = 0;

@@ -18,17 +18,17 @@ pub struct CompanyAllocation {
 /// Rules:
 ///
 /// - If company allocations are disabled:
-///     100% goes to Liquidity.
+///   100% goes to Liquidity.
 ///
 /// - If the accounting period has expired:
-///     automatically reset.
+///   automatically reset.
 ///
 /// - If the requested amount is below the remaining cap:
-///     company receives everything.
+///   company receives everything.
 ///
 /// - If the cap would be exceeded:
-///     company receives only the remaining allowance,
-///     with the excess redirected to Liquidity.
+///   company receives only the remaining allowance,
+///   with the excess redirected to Liquidity.
 ///
 pub fn allocate(company: &mut CompanyState, requested: u64, now: i64) -> Result<CompanyAllocation> {
     //

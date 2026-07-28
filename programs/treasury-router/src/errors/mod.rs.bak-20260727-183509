@@ -87,7 +87,4 @@ pub enum TreasuryRouterError {
     AccountingNotSettled,
     #[msg("Invalid settlement-token execution destination")]
     InvalidExecutionDestination,
-
-    #[msg("The Integrity Firewall rejected the supplied account architecture.")]
-    IntegrityFirewallViolation,
 }

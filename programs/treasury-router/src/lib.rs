@@ -46,12 +46,16 @@ pub mod treasury_router {
         instructions::initialize_treasury::handler(ctx)
     }
 
+    pub fn initialize_execution_config(ctx: Context<InitializeExecutionConfig>) -> Result<()> {
+        instructions::initialize_execution_config::handler(ctx)
+    }
+
     pub fn deposit_settlement(ctx: Context<DepositSettlement>, amount: u64) -> Result<()> {
         instructions::deposit_settlement::handler(ctx, amount)
     }
 
-    pub fn process_fees(ctx: Context<ProcessFees>, amount: u64) -> Result<()> {
-        instructions::process_fees::handler(ctx, amount)
+    pub fn process_fees(ctx: Context<ProcessFees>) -> Result<()> {
+        instructions::process_fees::handler(ctx)
     }
 
     pub fn authorize_reserve_execution(

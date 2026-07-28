@@ -4,6 +4,8 @@ pub mod company;
 pub mod dam;
 pub mod execution_guard;
 pub mod founder;
+pub mod integrity_firewall;
 pub mod liquidity;
 pub mod reserve;
+pub mod sentinel;
 pub mod waterfall;
