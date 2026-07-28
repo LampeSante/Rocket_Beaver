@@ -163,3 +163,137 @@ mod tests {
         assert_eq!(classify(499), WaterfallStage::Emergency);
     }
 }
+
+/// Deterministic fee-allocation profile selected by the Survival Waterfall.
+///
+/// The immutable ProtocolConfig remains the canonical Normal target.
+/// Defensive profiles redirect newly processed fees without changing the
+/// stored protocol configuration.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AdaptiveAllocation {
+    pub reserve_bps: u16,
+    pub buyback_burn_bps: u16,
+    pub liquidity_bps: u16,
+    pub company_bps: u16,
+    pub founder_bps: u16,
+}
+
+impl AdaptiveAllocation {
+    pub const fn total_bps(self) -> u32 {
+        self.reserve_bps as u32
+            + self.buyback_burn_bps as u32
+            + self.liquidity_bps as u32
+            + self.company_bps as u32
+            + self.founder_bps as u32
+    }
+}
+
+/// Returns the deterministic allocation profile for the current stage.
+///
+/// NORMAL: canonical 30/20/20/20/10 target.
+/// CAUTION: moderate reserve and liquidity reinforcement.
+/// DEFENSIVE: Founder stopped; Company and Buyback reduced.
+/// SURVIVAL: only Reserve and Liquidity receive new allocations.
+/// EMERGENCY: maximum Reserve rebuilding with Liquidity continuity.
+pub const fn allocation_for_stage(stage: WaterfallStage) -> AdaptiveAllocation {
+    match stage {
+        WaterfallStage::Normal => AdaptiveAllocation {
+            reserve_bps: 3_000,
+            buyback_burn_bps: 2_000,
+            liquidity_bps: 2_000,
+            company_bps: 2_000,
+            founder_bps: 1_000,
+        },
+        WaterfallStage::Caution => AdaptiveAllocation {
+            reserve_bps: 4_000,
+            buyback_burn_bps: 1_500,
+            liquidity_bps: 2_500,
+            company_bps: 1_500,
+            founder_bps: 500,
+        },
+        WaterfallStage::Defensive => AdaptiveAllocation {
+            reserve_bps: 5_000,
+            buyback_burn_bps: 1_000,
+            liquidity_bps: 3_000,
+            company_bps: 1_000,
+            founder_bps: 0,
+        },
+        WaterfallStage::Survival => AdaptiveAllocation {
+            reserve_bps: 6_500,
+            buyback_burn_bps: 0,
+            liquidity_bps: 3_500,
+            company_bps: 0,
+            founder_bps: 0,
+        },
+        WaterfallStage::Emergency => AdaptiveAllocation {
+            reserve_bps: 8_000,
+            buyback_burn_bps: 0,
+            liquidity_bps: 2_000,
+            company_bps: 0,
+            founder_bps: 0,
+        },
+    }
+}
+
+#[cfg(test)]
+mod adaptive_allocation_tests {
+    use super::*;
+
+    #[test]
+    fn every_profile_allocates_exactly_one_hundred_percent() {
+        for stage in [
+            WaterfallStage::Normal,
+            WaterfallStage::Caution,
+            WaterfallStage::Defensive,
+            WaterfallStage::Survival,
+            WaterfallStage::Emergency,
+        ] {
+            assert_eq!(allocation_for_stage(stage).total_bps(), 10_000);
+        }
+    }
+
+    #[test]
+    fn normal_profile_preserves_locked_beavernomics() {
+        let allocation = allocation_for_stage(WaterfallStage::Normal);
+
+        assert_eq!(allocation.reserve_bps, 3_000);
+        assert_eq!(allocation.buyback_burn_bps, 2_000);
+        assert_eq!(allocation.liquidity_bps, 2_000);
+        assert_eq!(allocation.company_bps, 2_000);
+        assert_eq!(allocation.founder_bps, 1_000);
+    }
+
+    #[test]
+    fn defensive_profiles_prioritize_reserve() {
+        let normal = allocation_for_stage(WaterfallStage::Normal);
+
+        for stage in [
+            WaterfallStage::Caution,
+            WaterfallStage::Defensive,
+            WaterfallStage::Survival,
+            WaterfallStage::Emergency,
+        ] {
+            let allocation = allocation_for_stage(stage);
+
+            assert!(allocation.reserve_bps >= normal.reserve_bps);
+            assert!(allocation.company_bps <= normal.company_bps);
+            assert!(allocation.founder_bps <= normal.founder_bps);
+        }
+    }
+
+    #[test]
+    fn survival_and_emergency_stop_optional_allocations() {
+        for stage in [WaterfallStage::Survival, WaterfallStage::Emergency] {
+            let allocation = allocation_for_stage(stage);
+
+            assert_eq!(allocation.buyback_burn_bps, 0);
+            assert_eq!(allocation.company_bps, 0);
+            assert_eq!(allocation.founder_bps, 0);
+
+            assert_eq!(
+                u32::from(allocation.reserve_bps) + u32::from(allocation.liquidity_bps),
+                10_000
+            );
+        }
+    }
+}

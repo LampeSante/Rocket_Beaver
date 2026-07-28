@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     engines::{
+        beaver_score,
         dam::{self, DamLevel},
         waterfall::{self, WaterfallStage},
     },
@@ -64,7 +65,14 @@ pub fn authorize_release(
     }
 
     let waterfall_evaluation = waterfall::evaluate(treasury)?;
-    let dam_evaluation = dam::evaluate(waterfall_evaluation.stage);
+
+    let pre_dam_health_score = beaver_score::pre_dam_health_score(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+    )?;
+
+    let dam_evaluation = dam::evaluate_adaptive(waterfall_evaluation.stage, pre_dam_health_score);
 
     require!(
         dam_evaluation.release_bps <= 10_000,
@@ -450,6 +458,8 @@ mod tests {
 
     #[test]
     fn authorizes_release_at_exact_dam_limit() {
+        // The Adaptive Dam tightens this Caution-stage fixture to
+        // Controlled: 5,000 BPS of 800 pending units equals 400.
         let protocol = valid_protocol();
         let mut treasury = valid_treasury();
 
@@ -469,14 +479,14 @@ mod tests {
         treasury.total_fees_allocated = 1_000;
 
         let authorization =
-            authorize_release(&protocol, &treasury, ReleaseBucket::Company, 600).unwrap();
+            authorize_release(&protocol, &treasury, ReleaseBucket::Company, 400).unwrap();
 
-        assert_eq!(authorization.requested_amount, 600);
+        assert_eq!(authorization.requested_amount, 400);
         assert_eq!(authorization.pending_balance, 800);
-        assert_eq!(authorization.maximum_release, 600);
+        assert_eq!(authorization.maximum_release, 400);
         assert_eq!(authorization.waterfall_stage, WaterfallStage::Caution);
-        assert_eq!(authorization.dam_level, DamLevel::Normal);
-        assert_eq!(authorization.release_bps, 7_500);
+        assert_eq!(authorization.dam_level, DamLevel::Controlled);
+        assert_eq!(authorization.release_bps, 5_000);
         assert_eq!(authorization.reserve_ratio_bps, 2_000);
     }
 

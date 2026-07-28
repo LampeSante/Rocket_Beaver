@@ -2,6 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     engines::{
+        beaver_score,
         dam::{self, DamLevel},
         waterfall::{self, WaterfallStage},
     },
@@ -119,9 +120,16 @@ pub fn evaluate(
     }
 
     /*
-     * Derive the Dam from the current Waterfall result.
+     * Derive the Adaptive Dam from authoritative treasury health.
      */
-    let dam_evaluation = dam::evaluate(waterfall_stage);
+    let pre_dam_health_score = beaver_score::pre_dam_health_score(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_stage,
+    )?;
+
+    let dam_evaluation = dam::evaluate_adaptive(waterfall_stage, pre_dam_health_score);
+
     let dam_level = dam_evaluation.level;
     let release_bps = dam_evaluation.release_bps;
 

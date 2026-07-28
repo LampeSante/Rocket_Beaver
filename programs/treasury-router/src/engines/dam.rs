@@ -75,12 +75,42 @@ pub struct DamEvaluation {
 /// SURVIVAL  -> RESTRICTED
 /// EMERGENCY -> FILLING
 pub fn evaluate(waterfall_stage: WaterfallStage) -> DamEvaluation {
-    let level = match waterfall_stage {
+    evaluate_adaptive(waterfall_stage, 750)
+}
+
+/// Evaluates the Dam using the Waterfall stage and the non-circular
+/// Pre-Dam Health Score.
+///
+/// The Waterfall establishes the least-permissive baseline required by
+/// reserve conditions. The health score may tighten that baseline, but may
+/// never make the Dam more permissive than the Waterfall allows.
+pub fn evaluate_adaptive(
+    waterfall_stage: WaterfallStage,
+    pre_dam_health_score: u16,
+) -> DamEvaluation {
+    let waterfall_level = match waterfall_stage {
         WaterfallStage::Normal => DamLevel::Overflow,
         WaterfallStage::Caution => DamLevel::Normal,
         WaterfallStage::Defensive => DamLevel::Controlled,
         WaterfallStage::Survival => DamLevel::Restricted,
         WaterfallStage::Emergency => DamLevel::Filling,
+    };
+
+    let health_level = match pre_dam_health_score {
+        650..=u16::MAX => DamLevel::Overflow,
+        500..=649 => DamLevel::Normal,
+        350..=499 => DamLevel::Controlled,
+        200..=349 => DamLevel::Restricted,
+        _ => DamLevel::Filling,
+    };
+
+    // Lower numeric values are more restrictive. The Adaptive Dam therefore
+    // selects the more restrictive result and can never weaken Waterfall
+    // protection.
+    let level = if waterfall_level.as_u8() <= health_level.as_u8() {
+        waterfall_level
+    } else {
+        health_level
     };
 
     DamEvaluation {
@@ -129,6 +159,51 @@ mod tests {
     #[test]
     fn emergency_waterfall_closes_dam() {
         let result = evaluate(WaterfallStage::Emergency);
+
+        assert_eq!(result.level, DamLevel::Filling);
+        assert_eq!(result.release_bps, 0);
+    }
+}
+
+#[cfg(test)]
+mod adaptive_dam_tests {
+    use super::*;
+
+    #[test]
+    fn healthy_normal_protocol_allows_full_release() {
+        let result = evaluate_adaptive(WaterfallStage::Normal, 750);
+
+        assert_eq!(result.level, DamLevel::Overflow);
+        assert_eq!(result.release_bps, 10_000);
+    }
+
+    #[test]
+    fn weak_health_tightens_a_normal_waterfall() {
+        let result = evaluate_adaptive(WaterfallStage::Normal, 420);
+
+        assert_eq!(result.level, DamLevel::Controlled);
+        assert_eq!(result.release_bps, 5_000);
+    }
+
+    #[test]
+    fn health_score_can_never_weaken_waterfall_protection() {
+        let result = evaluate_adaptive(WaterfallStage::Survival, 750);
+
+        assert_eq!(result.level, DamLevel::Restricted);
+        assert_eq!(result.release_bps, 2_500);
+    }
+
+    #[test]
+    fn critically_low_health_closes_the_dam() {
+        let result = evaluate_adaptive(WaterfallStage::Normal, 199);
+
+        assert_eq!(result.level, DamLevel::Filling);
+        assert_eq!(result.release_bps, 0);
+    }
+
+    #[test]
+    fn emergency_waterfall_always_closes_the_dam() {
+        let result = evaluate_adaptive(WaterfallStage::Emergency, 750);
 
         assert_eq!(result.level, DamLevel::Filling);
         assert_eq!(result.release_bps, 0);

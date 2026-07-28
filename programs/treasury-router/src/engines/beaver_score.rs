@@ -42,6 +42,36 @@ pub struct BeaverScoreEvaluation {
     pub reserve_ratio_bps: u16,
 }
 
+/// Maximum health score available before the Dam component is applied.
+pub const PRE_DAM_MAX_POINTS: u16 =
+    WATERFALL_MAX_POINTS + RESERVE_MAX_POINTS + ACCOUNTING_MAX_POINTS;
+
+/// Calculates the health score used by the Adaptive Dam.
+///
+/// This score deliberately excludes Dam points, preventing a circular
+/// dependency in which the Dam would be used to calculate itself.
+pub fn pre_dam_health_score(
+    treasury: &TreasuryState,
+    reserve_ratio_bps: u16,
+    waterfall_stage: WaterfallStage,
+) -> Result<u16> {
+    let waterfall_points = score_waterfall(waterfall_stage);
+    let reserve_points = score_reserve(reserve_ratio_bps)?;
+    let accounting_points = score_accounting(treasury);
+
+    let score = waterfall_points
+        .checked_add(reserve_points)
+        .and_then(|value| value.checked_add(accounting_points))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    require!(
+        score <= PRE_DAM_MAX_POINTS,
+        TreasuryRouterError::ArithmeticOverflow
+    );
+
+    Ok(score)
+}
+
 /// Calculates the current Beaver Score.
 ///
 /// Beaver Score v1 is deterministic and uses only internal protocol state.
@@ -230,5 +260,76 @@ mod tests {
     fn reserve_score_is_capped() {
         assert_eq!(score_reserve(10_000).unwrap(), 250);
         assert_eq!(score_reserve(u16::MAX).unwrap(), 250);
+    }
+}
+
+#[cfg(test)]
+mod pre_dam_health_tests {
+    use super::*;
+
+    fn healthy_treasury() -> TreasuryState {
+        TreasuryState {
+            version: 1,
+            protocol: Pubkey::new_unique(),
+            settlement_mint: Pubkey::new_unique(),
+            settlement_vault: Pubkey::new_unique(),
+
+            total_fees_received: 1_000,
+            total_fees_allocated: 1_000,
+
+            pending_reserve: 300,
+            pending_buyback_burn: 200,
+            pending_liquidity: 200,
+            pending_company: 200,
+            pending_founder: 100,
+
+            lifetime_reserve: 300,
+            lifetime_buyback_burn: 200,
+            lifetime_liquidity: 200,
+            lifetime_company: 200,
+            lifetime_founder: 100,
+
+            released_reserve: 0,
+            released_buyback_burn: 0,
+            released_liquidity: 0,
+            released_company: 0,
+            released_founder: 0,
+
+            last_processed_at: 1,
+            processing_epoch: 1,
+            waterfall_stage: WaterfallStage::Normal.as_u8(),
+            buybacks_paused: false,
+            bump: 255,
+            reserved: [0; 24],
+        }
+    }
+
+    #[test]
+    fn ideal_pre_dam_health_scores_seven_hundred_fifty() {
+        let treasury = healthy_treasury();
+
+        let score = pre_dam_health_score(&treasury, 10_000, WaterfallStage::Normal).unwrap();
+
+        assert_eq!(score, PRE_DAM_MAX_POINTS);
+        assert_eq!(score, 750);
+    }
+
+    #[test]
+    fn emergency_pre_dam_health_retains_only_accounting_points() {
+        let treasury = healthy_treasury();
+
+        let score = pre_dam_health_score(&treasury, 0, WaterfallStage::Emergency).unwrap();
+
+        assert_eq!(score, ACCOUNTING_MAX_POINTS);
+    }
+
+    #[test]
+    fn corrupted_accounting_removes_integrity_points() {
+        let mut treasury = healthy_treasury();
+        treasury.total_fees_allocated = 999;
+
+        let score = pre_dam_health_score(&treasury, 10_000, WaterfallStage::Normal).unwrap();
+
+        assert_eq!(score, WATERFALL_MAX_POINTS + RESERVE_MAX_POINTS + 50);
     }
 }
