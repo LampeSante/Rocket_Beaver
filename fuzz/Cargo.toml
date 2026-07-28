@@ -44,3 +44,10 @@ bench = false
 
 # Keep fuzzing isolated from the production Cargo workspace.
 [workspace]
+
+[[bin]]
+name = "process_fees"
+path = "fuzz_targets/process_fees.rs"
+test = false
+doc = false
+bench = false

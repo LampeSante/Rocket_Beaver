@@ -147,155 +147,38 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
 
     let clock = Clock::get()?;
 
-    // Evaluate treasury health before applying this fee cycle. The current
-    // transaction cannot influence the stage used to allocate itself.
-    let pre_allocation_waterfall = waterfall::evaluate(&ctx.accounts.treasury)?;
-
-    let adaptive_allocation = waterfall::allocation_for_stage(pre_allocation_waterfall.stage);
-
-    require!(
-        adaptive_allocation.total_bps() == u32::from(BPS_DENOMINATOR),
-        TreasuryRouterError::InvalidAllocationConfiguration
-    );
-
-    let base_reserve_amount = calculate_share(amount, adaptive_allocation.reserve_bps)?;
-
-    let buyback_amount = calculate_share(amount, adaptive_allocation.buyback_burn_bps)?;
-
-    let liquidity_amount = calculate_share(amount, adaptive_allocation.liquidity_bps)?;
-
-    let requested_company_amount = calculate_share(amount, adaptive_allocation.company_bps)?;
-
-    let requested_founder_amount = calculate_share(amount, adaptive_allocation.founder_bps)?;
-
-    let allocated_before_remainder = base_reserve_amount
-        .checked_add(buyback_amount)
-        .and_then(|value| value.checked_add(liquidity_amount))
-        .and_then(|value| value.checked_add(requested_company_amount))
-        .and_then(|value| value.checked_add(requested_founder_amount))
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    let rounding_remainder = amount
-        .checked_sub(allocated_before_remainder)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    let normal_reserve_amount = base_reserve_amount
-        .checked_add(rounding_remainder)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    let founder_allocation = founder::allocate(
-        &mut ctx.accounts.founder_state,
-        requested_founder_amount,
-        clock.unix_timestamp,
-    )?;
-
-    let company_allocation = company::allocate(
-        &mut ctx.accounts.company_state,
+    let FeeCycleOutcome {
+        pre_allocation_waterfall,
+        adaptive_allocation,
         requested_company_amount,
+        requested_founder_amount,
+        company_amount,
+        founder_amount,
+        reserve_deposit,
+        liquidity_deposit,
+        buyback_deposit,
+        previous_waterfall_stage,
+        waterfall_evaluation,
+        previous_dam_level,
+        pre_dam_health_score,
+        dam_evaluation,
+        previous_beaver_score,
+        beaver_score_evaluation,
+    } = process_fee_cycle(
+        &mut ctx.accounts.protocol_state,
+        &mut ctx.accounts.treasury,
+        &mut ctx.accounts.founder_state,
+        &mut ctx.accounts.company_state,
+        amount,
         clock.unix_timestamp,
     )?;
-
-    let founder_amount = founder_allocation.founder_amount;
-    let company_amount = company_allocation.company_amount;
-
-    // Locked Bevernomics rule:
-    // all Company and Founder cap overflow is redirected to Liquidity Growth.
-    let final_liquidity_amount = liquidity_amount
-        .checked_add(founder_allocation.liquidity_overflow_amount)
-        .and_then(|value| value.checked_add(company_allocation.liquidity_overflow_amount))
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    let final_allocated_amount = normal_reserve_amount
-        .checked_add(buyback_amount)
-        .and_then(|value| value.checked_add(final_liquidity_amount))
-        .and_then(|value| value.checked_add(company_amount))
-        .and_then(|value| value.checked_add(founder_amount))
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    require!(
-        final_allocated_amount == amount,
-        TreasuryRouterError::InvalidAllocationConfiguration
-    );
-
-    let treasury = &mut ctx.accounts.treasury;
-
-    treasury.total_fees_received = treasury
-        .total_fees_received
-        .checked_add(amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    treasury.total_fees_allocated = treasury
-        .total_fees_allocated
-        .checked_add(amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    let reserve_deposit = reserve::deposit_fee_allocation(treasury, normal_reserve_amount)?;
-
-    let liquidity_deposit = liquidity::deposit(treasury, final_liquidity_amount)?;
-
-    let buyback_deposit = buyback::deposit(treasury, buyback_amount)?;
-
-    treasury.pending_company = treasury
-        .pending_company
-        .checked_add(company_amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    treasury.pending_founder = treasury
-        .pending_founder
-        .checked_add(founder_amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    treasury.lifetime_company = treasury
-        .lifetime_company
-        .checked_add(company_amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    treasury.lifetime_founder = treasury
-        .lifetime_founder
-        .checked_add(founder_amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    treasury.processing_epoch = treasury
-        .processing_epoch
-        .checked_add(1)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    treasury.last_processed_at = clock.unix_timestamp;
-
-    let previous_waterfall_stage = treasury.waterfall_stage;
-    let waterfall_evaluation = waterfall::evaluate(treasury)?;
-
-    treasury.waterfall_stage = waterfall_evaluation.stage.as_u8();
-
-    let previous_dam_level = ctx.accounts.protocol_state.dam_level;
-
-    let pre_dam_health_score = beaver_score::pre_dam_health_score(
-        treasury,
-        waterfall_evaluation.reserve_ratio_bps,
-        waterfall_evaluation.stage,
-    )?;
-
-    let dam_evaluation = dam::evaluate_adaptive(waterfall_evaluation.stage, pre_dam_health_score);
-
-    ctx.accounts.protocol_state.dam_level = dam_evaluation.level.as_u8();
-
-    let previous_beaver_score = ctx.accounts.protocol_state.beaver_score;
-
-    let beaver_score_evaluation = beaver_score::evaluate(
-        treasury,
-        waterfall_evaluation.reserve_ratio_bps,
-        waterfall_evaluation.stage,
-        dam_evaluation.level,
-    )?;
-
-    ctx.accounts.protocol_state.beaver_score = beaver_score_evaluation.total_score;
 
     // Re-run both Sentinel layers after every state mutation. A failed
     // invariant aborts the transaction atomically and rolls all changes back.
     let post_linkage_report = sentinel::evaluate_linkage(
         ctx.accounts.protocol_state.key(),
         &ctx.accounts.protocol_config,
-        &*treasury,
+        &*ctx.accounts.treasury,
     );
 
     require!(
@@ -303,7 +186,8 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
         TreasuryRouterError::IntegrityFirewallViolation
     );
 
-    let post_sentinel_report = sentinel::evaluate(&ctx.accounts.protocol_config, &*treasury)?;
+    let post_sentinel_report =
+        sentinel::evaluate(&ctx.accounts.protocol_config, &*ctx.accounts.treasury)?;
 
     require!(
         post_sentinel_report.healthy,
@@ -467,9 +351,206 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
         beaver_score::ACCOUNTING_MAX_POINTS
     );
 
-    msg!("Processing epoch: {}", treasury.processing_epoch);
+    msg!(
+        "Processing epoch: {}",
+        ctx.accounts.treasury.processing_epoch
+    );
 
     Ok(())
+}
+
+/// Deterministic result of one successful Beavernomics fee-processing cycle.
+///
+/// Account validation, vault-balance discovery, protocol pause enforcement,
+/// and Sentinel linkage checks remain in the Anchor instruction handler.
+/// This function contains the production economic state transition and is
+/// shared directly with the fuzz harness.
+pub struct FeeCycleOutcome {
+    pub pre_allocation_waterfall: waterfall::WaterfallEvaluation,
+    pub adaptive_allocation: waterfall::AdaptiveAllocation,
+    pub requested_company_amount: u64,
+    pub requested_founder_amount: u64,
+    pub company_amount: u64,
+    pub founder_amount: u64,
+    pub reserve_deposit: reserve::ReserveDeposit,
+    pub liquidity_deposit: liquidity::LiquidityDeposit,
+    pub buyback_deposit: buyback::BuybackDeposit,
+    pub previous_waterfall_stage: u8,
+    pub waterfall_evaluation: waterfall::WaterfallEvaluation,
+    pub previous_dam_level: u8,
+    pub pre_dam_health_score: u16,
+    pub dam_evaluation: dam::DamEvaluation,
+    pub previous_beaver_score: u16,
+    pub beaver_score_evaluation: beaver_score::BeaverScoreEvaluation,
+}
+
+/// Applies one complete production fee-allocation state transition.
+///
+/// All arithmetic is checked. Company and Founder overflow is redirected to
+/// Liquidity Growth. Rounding remainder is assigned to Reserve. Any error
+/// aborts the surrounding Solana transaction atomically when called through
+/// the instruction handler.
+pub fn process_fee_cycle(
+    protocol_state: &mut ProtocolState,
+    treasury: &mut TreasuryState,
+    founder_state: &mut FounderState,
+    company_state: &mut CompanyState,
+    amount: u64,
+    now: i64,
+) -> Result<FeeCycleOutcome> {
+    require!(amount > 0, TreasuryRouterError::NoUnprocessedFees);
+
+    // Evaluate health before applying this cycle so the transaction cannot
+    // improve the stage used to allocate itself.
+    let pre_allocation_waterfall = waterfall::evaluate(treasury)?;
+
+    let adaptive_allocation = waterfall::allocation_for_stage(pre_allocation_waterfall.stage);
+
+    require!(
+        adaptive_allocation.total_bps() == u32::from(BPS_DENOMINATOR),
+        TreasuryRouterError::InvalidAllocationConfiguration
+    );
+
+    let base_reserve_amount = calculate_share(amount, adaptive_allocation.reserve_bps)?;
+
+    let buyback_amount = calculate_share(amount, adaptive_allocation.buyback_burn_bps)?;
+
+    let liquidity_amount = calculate_share(amount, adaptive_allocation.liquidity_bps)?;
+
+    let requested_company_amount = calculate_share(amount, adaptive_allocation.company_bps)?;
+
+    let requested_founder_amount = calculate_share(amount, adaptive_allocation.founder_bps)?;
+
+    let allocated_before_remainder = base_reserve_amount
+        .checked_add(buyback_amount)
+        .and_then(|value| value.checked_add(liquidity_amount))
+        .and_then(|value| value.checked_add(requested_company_amount))
+        .and_then(|value| value.checked_add(requested_founder_amount))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let rounding_remainder = amount
+        .checked_sub(allocated_before_remainder)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let normal_reserve_amount = base_reserve_amount
+        .checked_add(rounding_remainder)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let founder_allocation = founder::allocate(founder_state, requested_founder_amount, now)?;
+
+    let company_allocation = company::allocate(company_state, requested_company_amount, now)?;
+
+    let founder_amount = founder_allocation.founder_amount;
+    let company_amount = company_allocation.company_amount;
+
+    // Locked Bevernomics rule: all Company and Founder cap overflow is
+    // redirected to Liquidity Growth.
+    let final_liquidity_amount = liquidity_amount
+        .checked_add(founder_allocation.liquidity_overflow_amount)
+        .and_then(|value| value.checked_add(company_allocation.liquidity_overflow_amount))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let final_allocated_amount = normal_reserve_amount
+        .checked_add(buyback_amount)
+        .and_then(|value| value.checked_add(final_liquidity_amount))
+        .and_then(|value| value.checked_add(company_amount))
+        .and_then(|value| value.checked_add(founder_amount))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    require!(
+        final_allocated_amount == amount,
+        TreasuryRouterError::InvalidAllocationConfiguration
+    );
+
+    treasury.total_fees_received = treasury
+        .total_fees_received
+        .checked_add(amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.total_fees_allocated = treasury
+        .total_fees_allocated
+        .checked_add(amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let reserve_deposit = reserve::deposit_fee_allocation(treasury, normal_reserve_amount)?;
+
+    let liquidity_deposit = liquidity::deposit(treasury, final_liquidity_amount)?;
+
+    let buyback_deposit = buyback::deposit(treasury, buyback_amount)?;
+
+    treasury.pending_company = treasury
+        .pending_company
+        .checked_add(company_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.pending_founder = treasury
+        .pending_founder
+        .checked_add(founder_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.lifetime_company = treasury
+        .lifetime_company
+        .checked_add(company_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.lifetime_founder = treasury
+        .lifetime_founder
+        .checked_add(founder_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.processing_epoch = treasury
+        .processing_epoch
+        .checked_add(1)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.last_processed_at = now;
+
+    let previous_waterfall_stage = treasury.waterfall_stage;
+    let waterfall_evaluation = waterfall::evaluate(treasury)?;
+
+    treasury.waterfall_stage = waterfall_evaluation.stage.as_u8();
+
+    let previous_dam_level = protocol_state.dam_level;
+
+    let pre_dam_health_score = beaver_score::pre_dam_health_score(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+    )?;
+
+    let dam_evaluation = dam::evaluate_adaptive(waterfall_evaluation.stage, pre_dam_health_score);
+
+    protocol_state.dam_level = dam_evaluation.level.as_u8();
+
+    let previous_beaver_score = protocol_state.beaver_score;
+
+    let beaver_score_evaluation = beaver_score::evaluate(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+        dam_evaluation.level,
+    )?;
+
+    protocol_state.beaver_score = beaver_score_evaluation.total_score;
+
+    Ok(FeeCycleOutcome {
+        pre_allocation_waterfall,
+        adaptive_allocation,
+        requested_company_amount,
+        requested_founder_amount,
+        company_amount,
+        founder_amount,
+        reserve_deposit,
+        liquidity_deposit,
+        buyback_deposit,
+        previous_waterfall_stage,
+        waterfall_evaluation,
+        previous_dam_level,
+        pre_dam_health_score,
+        dam_evaluation,
+        previous_beaver_score,
+        beaver_score_evaluation,
+    })
 }
 
 fn calculate_share(amount: u64, basis_points: u16) -> Result<u64> {
