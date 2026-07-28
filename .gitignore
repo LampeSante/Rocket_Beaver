@@ -40,3 +40,29 @@ keys/
 # Local recovery backups
 *.bak-*
 *.corrupted-*
+
+# RBVR local security work files
+.*-backup-*/
+.adaptive-dam-test-fix-*/
+.backups/
+rbvr-security-fix-backup-*/
+test-ledger/
+
+# Windows metadata
+*:Zone.Identifier
+
+# Generated diagnostic inventories and snapshots
+rbvr-current-*.txt
+rbvr-phase2-source-*.txt
+rbvr-process-fees-code.txt
+rbvr-security-inventory.txt
+rbvr-waterfall-dam-current.txt
+integrity-firewall-integration-inventory.txt
+
+# Additional RBVR backup folders
+.sentinel-v*-backup-*/
+.rbvr-security-hardening-backup-*/
+.adaptive-dam-backup-*/
+
+# Local configuration
+rbvr-config.txt
