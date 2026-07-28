@@ -6,7 +6,9 @@ use crate::{
         BPS_DENOMINATOR, COMPANY_STATE_SEED, FOUNDER_STATE_SEED, PROTOCOL_CONFIG_SEED,
         PROTOCOL_SEED, TREASURY_SEED,
     },
-    engines::{beaver_score, buyback, company, dam, founder, liquidity, reserve, waterfall},
+    engines::{
+        beaver_score, buyback, company, dam, founder, liquidity, reserve, sentinel, waterfall,
+    },
     errors::TreasuryRouterError,
     state::{CompanyState, FounderState, ProtocolConfig, ProtocolState, TreasuryState},
 };
@@ -84,6 +86,28 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
         TreasuryRouterError::ProtocolPaused
     );
 
+    // Fail closed before any accounting mutation. Sentinel V2 verifies the
+    // exact locked 30/20/20/20/10 configuration, immutable configuration flag,
+    // canonical protocol linkage, and lifetime-allocation conservation.
+    let pre_linkage_report = sentinel::evaluate_linkage(
+        ctx.accounts.protocol_state.key(),
+        &ctx.accounts.protocol_config,
+        &ctx.accounts.treasury,
+    );
+
+    require!(
+        pre_linkage_report.healthy,
+        TreasuryRouterError::IntegrityFirewallViolation
+    );
+
+    let pre_sentinel_report =
+        sentinel::evaluate(&ctx.accounts.protocol_config, &ctx.accounts.treasury)?;
+
+    require!(
+        pre_sentinel_report.healthy,
+        TreasuryRouterError::IntegrityFirewallViolation
+    );
+
     let total_released = ctx
         .accounts
         .treasury
@@ -123,15 +147,26 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
 
     let clock = Clock::get()?;
 
-    let base_reserve_amount = calculate_share(amount, config.reserve_bps)?;
+    // Evaluate treasury health before applying this fee cycle. The current
+    // transaction cannot influence the stage used to allocate itself.
+    let pre_allocation_waterfall = waterfall::evaluate(&ctx.accounts.treasury)?;
 
-    let buyback_amount = calculate_share(amount, config.buyback_burn_bps)?;
+    let adaptive_allocation = waterfall::allocation_for_stage(pre_allocation_waterfall.stage);
 
-    let liquidity_amount = calculate_share(amount, config.liquidity_bps)?;
+    require!(
+        adaptive_allocation.total_bps() == u32::from(BPS_DENOMINATOR),
+        TreasuryRouterError::InvalidAllocationConfiguration
+    );
 
-    let requested_company_amount = calculate_share(amount, config.company_bps)?;
+    let base_reserve_amount = calculate_share(amount, adaptive_allocation.reserve_bps)?;
 
-    let requested_founder_amount = calculate_share(amount, config.founder_bps)?;
+    let buyback_amount = calculate_share(amount, adaptive_allocation.buyback_burn_bps)?;
+
+    let liquidity_amount = calculate_share(amount, adaptive_allocation.liquidity_bps)?;
+
+    let requested_company_amount = calculate_share(amount, adaptive_allocation.company_bps)?;
+
+    let requested_founder_amount = calculate_share(amount, adaptive_allocation.founder_bps)?;
 
     let allocated_before_remainder = base_reserve_amount
         .checked_add(buyback_amount)
@@ -234,7 +269,13 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
 
     let previous_dam_level = ctx.accounts.protocol_state.dam_level;
 
-    let dam_evaluation = dam::evaluate(waterfall_evaluation.stage);
+    let pre_dam_health_score = beaver_score::pre_dam_health_score(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+    )?;
+
+    let dam_evaluation = dam::evaluate_adaptive(waterfall_evaluation.stage, pre_dam_health_score);
 
     ctx.accounts.protocol_state.dam_level = dam_evaluation.level.as_u8();
 
@@ -249,11 +290,46 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
 
     ctx.accounts.protocol_state.beaver_score = beaver_score_evaluation.total_score;
 
+    // Re-run both Sentinel layers after every state mutation. A failed
+    // invariant aborts the transaction atomically and rolls all changes back.
+    let post_linkage_report = sentinel::evaluate_linkage(
+        ctx.accounts.protocol_state.key(),
+        &ctx.accounts.protocol_config,
+        &*treasury,
+    );
+
+    require!(
+        post_linkage_report.healthy,
+        TreasuryRouterError::IntegrityFirewallViolation
+    );
+
+    let post_sentinel_report = sentinel::evaluate(&ctx.accounts.protocol_config, &*treasury)?;
+
+    require!(
+        post_sentinel_report.healthy,
+        TreasuryRouterError::IntegrityFirewallViolation
+    );
+
     msg!("Beavernomics fee accounting completed");
     msg!("Gross fee amount: {}", amount);
 
     msg!(
-        "Normal reserve allocation: {}",
+        "Pre-allocation Waterfall stage: {} ({})",
+        pre_allocation_waterfall.stage.as_u8(),
+        pre_allocation_waterfall.stage.label()
+    );
+
+    msg!(
+        "Adaptive allocation BPS R/B/L/C/F: {}/{}/{}/{}/{}",
+        adaptive_allocation.reserve_bps,
+        adaptive_allocation.buyback_burn_bps,
+        adaptive_allocation.liquidity_bps,
+        adaptive_allocation.company_bps,
+        adaptive_allocation.founder_bps
+    );
+
+    msg!(
+        "Reserve allocation including rounding: {}",
         reserve_deposit.normal_amount
     );
 
@@ -341,6 +417,12 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
     );
 
     msg!("Dam previous level: {}", previous_dam_level);
+
+    msg!(
+        "Pre-Dam Health Score: {} / {}",
+        pre_dam_health_score,
+        beaver_score::PRE_DAM_MAX_POINTS
+    );
 
     msg!(
         "Dam current level: {} ({})",
