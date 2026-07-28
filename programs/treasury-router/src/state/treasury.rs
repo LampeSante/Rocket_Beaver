@@ -72,30 +72,59 @@ impl TreasuryState {
         1 +        // bump
         24; // reserved
 
+    /// Validates one accounting bucket using fail-closed checked arithmetic.
+    ///
+    /// The invariant is:
+    ///
+    /// lifetime == pending + released
+    ///
+    /// Arithmetic overflow is always invalid. It must never be converted to
+    /// or saturated at u64::MAX because that could make a corrupted state
+    /// appear valid when lifetime is also u64::MAX.
+    fn accounting_bucket_is_valid(pending: u64, released: u64, lifetime: u64) -> bool {
+        pending
+            .checked_add(released)
+            .is_some_and(|total| total == lifetime)
+    }
+
     pub fn reserve_accounting_is_valid(&self) -> bool {
-        self.lifetime_reserve == self.pending_reserve.saturating_add(self.released_reserve)
+        Self::accounting_bucket_is_valid(
+            self.pending_reserve,
+            self.released_reserve,
+            self.lifetime_reserve,
+        )
     }
 
     pub fn buyback_accounting_is_valid(&self) -> bool {
-        self.lifetime_buyback_burn
-            == self
-                .pending_buyback_burn
-                .saturating_add(self.released_buyback_burn)
+        Self::accounting_bucket_is_valid(
+            self.pending_buyback_burn,
+            self.released_buyback_burn,
+            self.lifetime_buyback_burn,
+        )
     }
 
     pub fn liquidity_accounting_is_valid(&self) -> bool {
-        self.lifetime_liquidity
-            == self
-                .pending_liquidity
-                .saturating_add(self.released_liquidity)
+        Self::accounting_bucket_is_valid(
+            self.pending_liquidity,
+            self.released_liquidity,
+            self.lifetime_liquidity,
+        )
     }
 
     pub fn company_accounting_is_valid(&self) -> bool {
-        self.lifetime_company == self.pending_company.saturating_add(self.released_company)
+        Self::accounting_bucket_is_valid(
+            self.pending_company,
+            self.released_company,
+            self.lifetime_company,
+        )
     }
 
     pub fn founder_accounting_is_valid(&self) -> bool {
-        self.lifetime_founder == self.pending_founder.saturating_add(self.released_founder)
+        Self::accounting_bucket_is_valid(
+            self.pending_founder,
+            self.released_founder,
+            self.lifetime_founder,
+        )
     }
 
     pub fn execution_accounting_is_valid(&self) -> bool {
@@ -343,6 +372,38 @@ mod tests {
         treasury.lifetime_liquidity += 1;
         treasury.lifetime_founder += 1;
 
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn overflow_with_max_lifetime_fails_closed_for_every_bucket() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_reserve = u64::MAX;
+        treasury.released_reserve = u64::MAX;
+        treasury.lifetime_reserve = u64::MAX;
+
+        treasury.pending_buyback_burn = u64::MAX;
+        treasury.released_buyback_burn = u64::MAX;
+        treasury.lifetime_buyback_burn = u64::MAX;
+
+        treasury.pending_liquidity = u64::MAX;
+        treasury.released_liquidity = u64::MAX;
+        treasury.lifetime_liquidity = u64::MAX;
+
+        treasury.pending_company = u64::MAX;
+        treasury.released_company = u64::MAX;
+        treasury.lifetime_company = u64::MAX;
+
+        treasury.pending_founder = u64::MAX;
+        treasury.released_founder = u64::MAX;
+        treasury.lifetime_founder = u64::MAX;
+
+        assert!(!treasury.reserve_accounting_is_valid());
+        assert!(!treasury.buyback_accounting_is_valid());
+        assert!(!treasury.liquidity_accounting_is_valid());
+        assert!(!treasury.company_accounting_is_valid());
+        assert!(!treasury.founder_accounting_is_valid());
         assert!(!treasury.execution_accounting_is_valid());
     }
 

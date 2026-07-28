@@ -9,6 +9,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
+anchor-lang = "1.1.2"
 
 [dependencies.treasury-router]
 path = "../programs/treasury-router"
@@ -20,5 +21,26 @@ test = false
 doc = false
 bench = false
 
-# Keep the fuzz crate separate from the production Cargo workspace.
+[[bin]]
+name = "waterfall_engine"
+path = "fuzz_targets/waterfall_engine.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "adaptive_dam"
+path = "fuzz_targets/adaptive_dam.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "treasury_accounting"
+path = "fuzz_targets/treasury_accounting.rs"
+test = false
+doc = false
+bench = false
+
+# Keep fuzzing isolated from the production Cargo workspace.
 [workspace]
