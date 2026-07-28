@@ -66,3 +66,6 @@ integrity-firewall-integration-inventory.txt
 
 # Local configuration
 rbvr-config.txt
+
+# Locally generated security baseline snapshots
+security-baselines/
