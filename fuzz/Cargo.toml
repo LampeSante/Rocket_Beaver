@@ -58,3 +58,10 @@ path = "fuzz_targets/process_release.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "spillway_invariants"
+path = "fuzz_targets/spillway_invariants.rs"
+test = false
+doc = false
+bench = false
