@@ -346,6 +346,76 @@ describe("RBVR Treasury Router — protocol integration", function () {
     );
   });
 
+
+  // RT-002A — initialization assault
+  it("RT-002A rejects protocol-config initialization by an unauthorized signer", async () => {
+    const attacker = Keypair.generate();
+
+    const airdropSignature = await provider.connection.requestAirdrop(
+      attacker.publicKey,
+      1_000_000_000,
+    );
+
+    await provider.connection.confirmTransaction(
+      airdropSignature,
+      "confirmed",
+    );
+
+    const protocolBefore =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    assert.isNotNull(protocolBefore);
+
+    const configBefore =
+      await provider.connection.getAccountInfo(protocolConfigPda);
+
+    assert.isNull(
+      configBefore,
+      "protocol config must not exist before the legitimate initialization",
+    );
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .initializeProtocolConfig()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          authority: attacker.publicKey,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([attacker])
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "an unauthorized signer must not initialize protocol configuration",
+    );
+
+    const protocolAfter =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const configAfter =
+      await provider.connection.getAccountInfo(protocolConfigPda);
+
+    assert.isNotNull(protocolAfter);
+    assert.isNull(
+      configAfter,
+      "rejected unauthorized initialization must not create protocol config",
+    );
+
+    assert.isTrue(
+      Buffer.from(protocolAfter!.data).equals(
+        Buffer.from(protocolBefore!.data),
+      ),
+      "rejected unauthorized initialization mutated protocol state",
+    );
+  });
+
   it("initializes the locked protocol allocation", async () => {
     await program.methods
       .initializeProtocolConfig()
@@ -384,6 +454,62 @@ describe("RBVR Treasury Router — protocol integration", function () {
     );
   });
 
+
+  it("RT-002A rejects repeated protocol-config initialization without mutation", async () => {
+    const protocolBefore =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const configBefore =
+      await provider.connection.getAccountInfo(protocolConfigPda);
+
+    assert.isNotNull(protocolBefore);
+    assert.isNotNull(configBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .initializeProtocolConfig()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          authority,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "canonical protocol configuration must not initialize twice",
+    );
+
+    const protocolAfter =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const configAfter =
+      await provider.connection.getAccountInfo(protocolConfigPda);
+
+    assert.isNotNull(protocolAfter);
+    assert.isNotNull(configAfter);
+
+    assert.isTrue(
+      Buffer.from(protocolAfter!.data).equals(
+        Buffer.from(protocolBefore!.data),
+      ),
+      "failed protocol-config reinitialization mutated protocol state",
+    );
+
+    assert.isTrue(
+      Buffer.from(configAfter!.data).equals(
+        Buffer.from(configBefore!.data),
+      ),
+      "failed protocol-config reinitialization mutated configuration",
+    );
+  });
+
   it("initializes the settlement treasury and vault", async () => {
     await program.methods
       .initializeTreasury()
@@ -417,6 +543,80 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assert.equal(vault.owner.toBase58(), treasuryStatePda.toBase58());
   });
 
+
+  it("RT-002A rejects repeated treasury initialization without mutation", async () => {
+    const protocolBefore =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const treasuryBefore =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultBefore =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    assert.isNotNull(protocolBefore);
+    assert.isNotNull(treasuryBefore);
+    assert.isNotNull(vaultBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .initializeTreasury()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasuryState: treasuryStatePda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          authority,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "canonical treasury and vault must not initialize twice",
+    );
+
+    const protocolAfter =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const treasuryAfter =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultAfter =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    assert.isNotNull(protocolAfter);
+    assert.isNotNull(treasuryAfter);
+    assert.isNotNull(vaultAfter);
+
+    assert.isTrue(
+      Buffer.from(protocolAfter!.data).equals(
+        Buffer.from(protocolBefore!.data),
+      ),
+      "failed treasury reinitialization mutated protocol state",
+    );
+
+    assert.isTrue(
+      Buffer.from(treasuryAfter!.data).equals(
+        Buffer.from(treasuryBefore!.data),
+      ),
+      "failed treasury reinitialization mutated treasury state",
+    );
+
+    assert.isTrue(
+      Buffer.from(vaultAfter!.data).equals(
+        Buffer.from(vaultBefore!.data),
+      ),
+      "failed treasury reinitialization mutated settlement vault",
+    );
+  });
+
   it("initializes founder compensation controls", async () => {
     await program.methods
       .initializeFounder(
@@ -445,6 +645,66 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assert.equal(founder.enabled, true);
   });
 
+
+  it("RT-002A rejects repeated founder initialization without mutation", async () => {
+    const protocolBefore =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const founderBefore =
+      await provider.connection.getAccountInfo(founderStatePda);
+
+    assert.isNotNull(protocolBefore);
+    assert.isNotNull(founderBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .initializeFounder(
+          founderRecipientOwner.publicKey,
+          FOUNDER_CAP,
+          PERIOD_DURATION,
+        )
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          founderState: founderStatePda,
+          authority,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "canonical founder state must not initialize twice",
+    );
+
+    const protocolAfter =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const founderAfter =
+      await provider.connection.getAccountInfo(founderStatePda);
+
+    assert.isNotNull(protocolAfter);
+    assert.isNotNull(founderAfter);
+
+    assert.isTrue(
+      Buffer.from(protocolAfter!.data).equals(
+        Buffer.from(protocolBefore!.data),
+      ),
+      "failed founder reinitialization mutated protocol state",
+    );
+
+    assert.isTrue(
+      Buffer.from(founderAfter!.data).equals(
+        Buffer.from(founderBefore!.data),
+      ),
+      "failed founder reinitialization mutated founder state",
+    );
+  });
+
   it("initializes company allocation controls", async () => {
     await program.methods
       .initializeCompany(
@@ -471,6 +731,66 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assertBn(company.periodCap, COMPANY_CAP);
     assertBn(company.periodDuration, PERIOD_DURATION);
     assert.equal(company.enabled, true);
+  });
+
+
+  it("RT-002A rejects repeated company initialization without mutation", async () => {
+    const protocolBefore =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const companyBefore =
+      await provider.connection.getAccountInfo(companyStatePda);
+
+    assert.isNotNull(protocolBefore);
+    assert.isNotNull(companyBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .initializeCompany(
+          companyRecipientOwner.publicKey,
+          COMPANY_CAP,
+          PERIOD_DURATION,
+        )
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          companyState: companyStatePda,
+          authority,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "canonical company state must not initialize twice",
+    );
+
+    const protocolAfter =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const companyAfter =
+      await provider.connection.getAccountInfo(companyStatePda);
+
+    assert.isNotNull(protocolAfter);
+    assert.isNotNull(companyAfter);
+
+    assert.isTrue(
+      Buffer.from(protocolAfter!.data).equals(
+        Buffer.from(protocolBefore!.data),
+      ),
+      "failed company reinitialization mutated protocol state",
+    );
+
+    assert.isTrue(
+      Buffer.from(companyAfter!.data).equals(
+        Buffer.from(companyBefore!.data),
+      ),
+      "failed company reinitialization mutated company state",
+    );
   });
 
   it("deposits settlement assets into the treasury vault", async () => {
@@ -514,6 +834,539 @@ describe("RBVR Treasury Router — protocol integration", function () {
      * Fee-receipt accounting is recorded by processFees, not by the
      * deposit instruction itself.
      */
+  });
+
+
+  // RT-003 — deposit and token-authority assault
+
+  const assertDepositAccountingUnchanged = async (
+    treasuryBefore: Awaited<ReturnType<typeof treasury>>,
+    context: string,
+  ) => {
+    const treasuryAfter = await treasury();
+
+    assert.equal(
+      treasuryAfter.totalFeesReceived.toString(),
+      treasuryBefore.totalFeesReceived.toString(),
+      `${context} changed total received fees`,
+    );
+
+    assert.equal(
+      treasuryAfter.totalFeesAllocated.toString(),
+      treasuryBefore.totalFeesAllocated.toString(),
+      `${context} changed total allocated fees`,
+    );
+
+    assert.equal(
+      treasuryAfter.processingEpoch.toString(),
+      treasuryBefore.processingEpoch.toString(),
+      `${context} changed processing epoch`,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingReserve.toString(),
+      treasuryBefore.pendingReserve.toString(),
+      `${context} changed pending reserve`,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingBuybackBurn.toString(),
+      treasuryBefore.pendingBuybackBurn.toString(),
+      `${context} changed pending buyback`,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingLiquidity.toString(),
+      treasuryBefore.pendingLiquidity.toString(),
+      `${context} changed pending liquidity`,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingCompany.toString(),
+      treasuryBefore.pendingCompany.toString(),
+      `${context} changed pending company`,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingFounder.toString(),
+      treasuryBefore.pendingFounder.toString(),
+      `${context} changed pending founder`,
+    );
+
+    await assertAllTreasuryInvariants();
+  };
+
+  it("RT-003 rejects a source token account owned by another signer", async () => {
+    const attacker = Keypair.generate();
+
+    const attackerSource = (
+      await getOrCreateAssociatedTokenAccount(
+        provider.connection,
+        payer,
+        settlementMint,
+        attacker.publicKey,
+      )
+    ).address;
+
+    await mintTo(
+      provider.connection,
+      payer,
+      settlementMint,
+      attackerSource,
+      authority,
+      BigInt(DEPOSIT_AMOUNT.toString()),
+    );
+
+    const treasuryBefore = await treasury();
+
+    const attackerBefore = await getAccount(
+      provider.connection,
+      attackerSource,
+    );
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .depositSettlement(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasury: treasuryStatePda,
+          settlementMint,
+          sourceTokenAccount: attackerSource,
+          settlementVault: settlementVaultPda,
+
+          // The supplied signer does not own attackerSource.
+          authority: payer.publicKey,
+
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "deposit from an account owned by another signer must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "wrong-owner deposit should return an error",
+    );
+
+    const attackerAfter = await getAccount(
+      provider.connection,
+      attackerSource,
+    );
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      attackerAfter.amount,
+      attackerBefore.amount,
+      "wrong-owner deposit removed tokens from attacker source",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "wrong-owner deposit added tokens to treasury vault",
+    );
+
+    await assertDepositAccountingUnchanged(
+      treasuryBefore,
+      "wrong-owner deposit",
+    );
+  });
+
+  it("RT-003 rejects a source token account using the wrong mint", async () => {
+    const fakeMint = await createMint(
+      provider.connection,
+      payer,
+      authority,
+      null,
+      6,
+    );
+
+    const fakeSource = (
+      await getOrCreateAssociatedTokenAccount(
+        provider.connection,
+        payer,
+        fakeMint,
+        payer.publicKey,
+      )
+    ).address;
+
+    await mintTo(
+      provider.connection,
+      payer,
+      fakeMint,
+      fakeSource,
+      authority,
+      BigInt(DEPOSIT_AMOUNT.toString()),
+    );
+
+    const treasuryBefore = await treasury();
+
+    const fakeSourceBefore = await getAccount(
+      provider.connection,
+      fakeSource,
+    );
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .depositSettlement(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasury: treasuryStatePda,
+
+          // The canonical mint is supplied, but fakeSource belongs to fakeMint.
+          settlementMint,
+          sourceTokenAccount: fakeSource,
+
+          settlementVault: settlementVaultPda,
+          authority: payer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "deposit from a token account using the wrong mint must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "wrong-mint source deposit should return an error",
+    );
+
+    const fakeSourceAfter = await getAccount(
+      provider.connection,
+      fakeSource,
+    );
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      fakeSourceAfter.amount,
+      fakeSourceBefore.amount,
+      "wrong-mint deposit removed fake tokens",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "wrong-mint deposit changed canonical vault balance",
+    );
+
+    await assertDepositAccountingUnchanged(
+      treasuryBefore,
+      "wrong-mint source deposit",
+    );
+  });
+
+  it("RT-003 rejects a substituted settlement vault", async () => {
+    const attacker = Keypair.generate();
+
+    const fakeVault = (
+      await getOrCreateAssociatedTokenAccount(
+        provider.connection,
+        payer,
+        settlementMint,
+        attacker.publicKey,
+      )
+    ).address;
+
+    const treasuryBefore = await treasury();
+
+    const sourceBefore = await getAccount(
+      provider.connection,
+      sourceTokenAccount,
+    );
+
+    const canonicalVaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const fakeVaultBefore = await getAccount(
+      provider.connection,
+      fakeVault,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .depositSettlement(DEPOSIT_AMOUNT)
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasury: treasuryStatePda,
+          settlementMint,
+          sourceTokenAccount,
+
+          // Valid SPL token account, but not the canonical treasury vault.
+          settlementVault: fakeVault,
+
+          authority: payer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "substituted settlement vault must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "substituted-vault deposit should return an error",
+    );
+
+    const sourceAfter = await getAccount(
+      provider.connection,
+      sourceTokenAccount,
+    );
+
+    const canonicalVaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const fakeVaultAfter = await getAccount(
+      provider.connection,
+      fakeVault,
+    );
+
+    assert.equal(
+      sourceAfter.amount,
+      sourceBefore.amount,
+      "substituted-vault deposit removed source tokens",
+    );
+
+    assert.equal(
+      canonicalVaultAfter.amount,
+      canonicalVaultBefore.amount,
+      "substituted-vault deposit changed canonical vault",
+    );
+
+    assert.equal(
+      fakeVaultAfter.amount,
+      fakeVaultBefore.amount,
+      "substituted-vault deposit transferred tokens to attacker vault",
+    );
+
+    await assertDepositAccountingUnchanged(
+      treasuryBefore,
+      "substituted-vault deposit",
+    );
+  });
+
+  it("RT-003 rejects a zero-value deposit without mutation", async () => {
+    const zeroAmount = new anchor.BN(0);
+
+    const treasuryBefore = await treasury();
+
+    const sourceBefore = await getAccount(
+      provider.connection,
+      sourceTokenAccount,
+    );
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .depositSettlement(zeroAmount)
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasury: treasuryStatePda,
+          settlementMint,
+          sourceTokenAccount,
+          settlementVault: settlementVaultPda,
+          authority: payer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "zero-value deposit must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "zero-value deposit should return an error",
+    );
+
+    const sourceAfter = await getAccount(
+      provider.connection,
+      sourceTokenAccount,
+    );
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      sourceAfter.amount,
+      sourceBefore.amount,
+      "zero-value deposit changed source balance",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "zero-value deposit changed vault balance",
+    );
+
+    await assertDepositAccountingUnchanged(
+      treasuryBefore,
+      "zero-value deposit",
+    );
+  });
+
+  it("RT-003 rejects a deposit exceeding the source balance", async () => {
+    const sourceBefore = await getAccount(
+      provider.connection,
+      sourceTokenAccount,
+    );
+
+    const excessiveAmount = new anchor.BN(
+      (sourceBefore.amount + 1n).toString(),
+    );
+
+    const treasuryBefore = await treasury();
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .depositSettlement(excessiveAmount)
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasury: treasuryStatePda,
+          settlementMint,
+          sourceTokenAccount,
+          settlementVault: settlementVaultPda,
+          authority: payer.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "deposit exceeding source balance must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "insufficient-balance deposit should return an error",
+    );
+
+    const sourceAfter = await getAccount(
+      provider.connection,
+      sourceTokenAccount,
+    );
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      sourceAfter.amount,
+      sourceBefore.amount,
+      "insufficient-balance deposit changed source balance",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "insufficient-balance deposit changed vault balance",
+    );
+
+    await assertDepositAccountingUnchanged(
+      treasuryBefore,
+      "insufficient-balance deposit",
+    );
   });
 
   it("initializes the execution config", async () => {
@@ -572,6 +1425,72 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assert.equal(config.version, 1);
   });
 
+
+  it("RT-002A rejects repeated execution-config initialization without mutation", async () => {
+    const protocolBefore =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const executionBefore =
+      await provider.connection.getAccountInfo(executionConfigPda);
+
+    assert.isNotNull(protocolBefore);
+    assert.isNotNull(executionBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .initializeExecutionConfig()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          reserveDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+          executionConfig: executionConfigPda,
+          authority,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "canonical execution configuration must not initialize twice",
+    );
+
+    const protocolAfter =
+      await provider.connection.getAccountInfo(protocolStatePda);
+
+    const executionAfter =
+      await provider.connection.getAccountInfo(executionConfigPda);
+
+    assert.isNotNull(protocolAfter);
+    assert.isNotNull(executionAfter);
+
+    assert.isTrue(
+      Buffer.from(protocolAfter!.data).equals(
+        Buffer.from(protocolBefore!.data),
+      ),
+      "failed execution-config reinitialization mutated protocol state",
+    );
+
+    assert.isTrue(
+      Buffer.from(executionAfter!.data).equals(
+        Buffer.from(executionBefore!.data),
+      ),
+      "failed execution-config reinitialization mutated execution config",
+    );
+  });
+
   it("processes fees using the locked 30/20/20/20/10 model", async () => {
     await program.methods
       .processFees()
@@ -612,6 +1531,139 @@ describe("RBVR Treasury Router — protocol integration", function () {
     await assertAllTreasuryInvariants();
   });
 
+
+  // RT-004 — fee-processing and accounting assault
+  it("RT-004 rejects fee-processing replay without mutating accounting", async () => {
+    const treasuryBefore = await treasury();
+
+    const founderBefore =
+      await program.account.founderState.fetch(founderStatePda);
+
+    const companyBefore =
+      await program.account.companyState.fetch(companyStatePda);
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      /*
+       * The complete vault balance was already processed by the preceding
+       * successful processFees call. Replaying processFees without depositing
+       * new settlement assets must fail closed.
+       */
+      await program.methods
+        .processFees()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementVault: settlementVaultPda,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.isTrue(
+      rejected,
+      "Replaying processFees without new funds must be rejected",
+    );
+
+    assert.match(
+      failureText,
+      /NoUnprocessedFees|no unprocessed fees/i,
+      `Unexpected replay rejection: ${failureText}`,
+    );
+
+    const treasuryAfter = await treasury();
+
+    const founderAfter =
+      await program.account.founderState.fetch(founderStatePda);
+
+    const companyAfter =
+      await program.account.companyState.fetch(companyStatePda);
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const treasuryFields = [
+      "totalFeesReceived",
+      "totalFeesAllocated",
+      "pendingReserve",
+      "pendingBuybackBurn",
+      "pendingLiquidity",
+      "pendingCompany",
+      "pendingFounder",
+      "lifetimeReserve",
+      "lifetimeBuybackBurn",
+      "lifetimeLiquidity",
+      "lifetimeCompany",
+      "lifetimeFounder",
+      "releasedReserve",
+      "releasedBuybackBurn",
+      "releasedLiquidity",
+      "releasedCompany",
+      "releasedFounder",
+      "processingEpoch",
+    ] as const;
+
+    for (const field of treasuryFields) {
+      assert.equal(
+        treasuryAfter[field].toString(),
+        treasuryBefore[field].toString(),
+        `Rejected fee replay mutated treasury.${field}`,
+      );
+    }
+
+    const founderFields = [
+      "earnedCurrentPeriod",
+      "lifetimeEarned",
+      "periodStartedAt",
+    ] as const;
+
+    for (const field of founderFields) {
+      assert.equal(
+        founderAfter[field].toString(),
+        founderBefore[field].toString(),
+        `Rejected fee replay mutated founderState.${field}`,
+      );
+    }
+
+    const companyFields = [
+      "spentCurrentPeriod",
+      "lifetimeSpent",
+      "periodStartedAt",
+    ] as const;
+
+    for (const field of companyFields) {
+      assert.equal(
+        companyAfter[field].toString(),
+        companyBefore[field].toString(),
+        `Rejected fee replay mutated companyState.${field}`,
+      );
+    }
+
+    assert.equal(
+      vaultAfter.amount.toString(),
+      vaultBefore.amount.toString(),
+      "Rejected fee replay changed the settlement-vault balance",
+    );
+
+    await assertAllTreasuryInvariants();
+  });
   it("rejects duplicate execution destinations through the Integrity Firewall", async () => {
     const treasuryBefore = await treasury();
     const vaultBefore = await getAccount(
@@ -698,6 +1750,823 @@ describe("RBVR Treasury Router — protocol integration", function () {
       treasuryAfter.releasedReserve.toString(),
       treasuryBefore.releasedReserve.toString(),
       "Failed firewall transaction changed released reserve accounting",
+    );
+
+    await assertAllTreasuryInvariants();
+  });
+
+
+  // RT-002B — account substitution assault
+  it("RT-002B rejects a fake settlement mint without mutation", async () => {
+    const fakeMint = await createMint(
+      provider.connection,
+      payer,
+      authority,
+      null,
+      6,
+    );
+
+    const treasuryBefore =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultBefore =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const destinationBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.isNotNull(treasuryBefore);
+    assert.isNotNull(vaultBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .authorizeReserveExecution()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint: fakeMint,
+          settlementVault: settlementVaultPda,
+          reserveDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+          executionConfig: executionConfigPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "reserve execution must reject a substituted settlement mint",
+    );
+
+    const treasuryAfter =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultAfter =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const destinationAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.isNotNull(treasuryAfter);
+    assert.isNotNull(vaultAfter);
+
+    assert.isTrue(
+      Buffer.from(treasuryAfter!.data).equals(
+        Buffer.from(treasuryBefore!.data),
+      ),
+      "fake-mint attack mutated treasury state",
+    );
+
+    assert.isTrue(
+      Buffer.from(vaultAfter!.data).equals(
+        Buffer.from(vaultBefore!.data),
+      ),
+      "fake-mint attack mutated the settlement vault",
+    );
+
+    assert.equal(
+      destinationAfter.amount,
+      destinationBefore.amount,
+      "fake-mint attack transferred reserve funds",
+    );
+  });
+
+  it("RT-002B rejects a fake treasury vault without mutation", async () => {
+    const attacker = Keypair.generate();
+
+    const fakeVault = (
+      await getOrCreateAssociatedTokenAccount(
+        provider.connection,
+        payer,
+        settlementMint,
+        attacker.publicKey,
+      )
+    ).address;
+
+    const treasuryBefore =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const legitimateVaultBefore =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const fakeVaultBefore = await getAccount(
+      provider.connection,
+      fakeVault,
+    );
+
+    const destinationBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.isNotNull(treasuryBefore);
+    assert.isNotNull(legitimateVaultBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .authorizeReserveExecution()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint,
+          settlementVault: fakeVault,
+          reserveDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+          executionConfig: executionConfigPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "reserve execution must reject an attacker-controlled vault",
+    );
+
+    const treasuryAfter =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const legitimateVaultAfter =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const fakeVaultAfter = await getAccount(
+      provider.connection,
+      fakeVault,
+    );
+
+    const destinationAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.isNotNull(treasuryAfter);
+    assert.isNotNull(legitimateVaultAfter);
+
+    assert.isTrue(
+      Buffer.from(treasuryAfter!.data).equals(
+        Buffer.from(treasuryBefore!.data),
+      ),
+      "fake-vault attack mutated treasury state",
+    );
+
+    assert.isTrue(
+      Buffer.from(legitimateVaultAfter!.data).equals(
+        Buffer.from(legitimateVaultBefore!.data),
+      ),
+      "fake-vault attack mutated the legitimate vault",
+    );
+
+    assert.equal(
+      fakeVaultAfter.amount,
+      fakeVaultBefore.amount,
+      "fake-vault attack transferred funds into the attacker vault",
+    );
+
+    assert.equal(
+      destinationAfter.amount,
+      destinationBefore.amount,
+      "fake-vault attack changed the reserve destination balance",
+    );
+  });
+
+  it("RT-002B rejects an attacker-controlled reserve destination without mutation", async () => {
+    const attacker = Keypair.generate();
+
+    const attackerDestination = (
+      await getOrCreateAssociatedTokenAccount(
+        provider.connection,
+        payer,
+        settlementMint,
+        attacker.publicKey,
+      )
+    ).address;
+
+    const treasuryBefore =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultBefore =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const legitimateDestinationBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    const attackerDestinationBefore = await getAccount(
+      provider.connection,
+      attackerDestination,
+    );
+
+    assert.isNotNull(treasuryBefore);
+    assert.isNotNull(vaultBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .authorizeReserveExecution()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          reserveDestination: attackerDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+          executionConfig: executionConfigPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "reserve execution must reject a substituted destination",
+    );
+
+    const treasuryAfter =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultAfter =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const legitimateDestinationAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    const attackerDestinationAfter = await getAccount(
+      provider.connection,
+      attackerDestination,
+    );
+
+    assert.isNotNull(treasuryAfter);
+    assert.isNotNull(vaultAfter);
+
+    assert.isTrue(
+      Buffer.from(treasuryAfter!.data).equals(
+        Buffer.from(treasuryBefore!.data),
+      ),
+      "destination-substitution attack mutated treasury state",
+    );
+
+    assert.isTrue(
+      Buffer.from(vaultAfter!.data).equals(
+        Buffer.from(vaultBefore!.data),
+      ),
+      "destination-substitution attack mutated the settlement vault",
+    );
+
+    assert.equal(
+      legitimateDestinationAfter.amount,
+      legitimateDestinationBefore.amount,
+      "destination-substitution attack changed the legitimate destination",
+    );
+
+    assert.equal(
+      attackerDestinationAfter.amount,
+      attackerDestinationBefore.amount,
+      "destination-substitution attack transferred funds to the attacker",
+    );
+  });
+
+  it("RT-002B rejects a substituted token program without mutation", async () => {
+    const treasuryBefore =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultBefore =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const destinationBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.isNotNull(treasuryBefore);
+    assert.isNotNull(vaultBefore);
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .authorizeReserveExecution()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          reserveDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+          executionConfig: executionConfigPda,
+          tokenProgram: SystemProgram.programId,
+        })
+        .rpc();
+    } catch {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "reserve execution must reject a substituted token program",
+    );
+
+    const treasuryAfter =
+      await provider.connection.getAccountInfo(treasuryStatePda);
+
+    const vaultAfter =
+      await provider.connection.getAccountInfo(settlementVaultPda);
+
+    const destinationAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.isNotNull(treasuryAfter);
+    assert.isNotNull(vaultAfter);
+
+    assert.isTrue(
+      Buffer.from(treasuryAfter!.data).equals(
+        Buffer.from(treasuryBefore!.data),
+      ),
+      "token-program substitution mutated treasury state",
+    );
+
+    assert.isTrue(
+      Buffer.from(vaultAfter!.data).equals(
+        Buffer.from(vaultBefore!.data),
+      ),
+      "token-program substitution mutated the settlement vault",
+    );
+
+    assert.equal(
+      destinationAfter.amount,
+      destinationBefore.amount,
+      "token-program substitution transferred reserve funds",
+    );
+  });
+
+
+  // RT-002C — linked-account and PDA substitution assault
+
+  it("RT-002C rejects a substituted protocol-config PDA without mutation", async () => {
+    const treasuryBefore = await treasury();
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .processFees()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+
+          // Hostile substitution:
+          // execution_config is supplied where protocol_config is required.
+          protocolConfig: executionConfigPda,
+
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementVault: settlementVaultPda,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "substituted protocol-config PDA must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "substituted protocol-config PDA should return an error",
+    );
+
+    const treasuryAfter = await treasury();
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      treasuryAfter.totalFeesReceived.toString(),
+      treasuryBefore.totalFeesReceived.toString(),
+      "failed protocol-config substitution changed total received fees",
+    );
+
+    assert.equal(
+      treasuryAfter.totalFeesAllocated.toString(),
+      treasuryBefore.totalFeesAllocated.toString(),
+      "failed protocol-config substitution changed total allocated fees",
+    );
+
+    assert.equal(
+      treasuryAfter.processingEpoch.toString(),
+      treasuryBefore.processingEpoch.toString(),
+      "failed protocol-config substitution changed processing epoch",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingReserve.toString(),
+      treasuryBefore.pendingReserve.toString(),
+      "failed protocol-config substitution changed reserve accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingBuybackBurn.toString(),
+      treasuryBefore.pendingBuybackBurn.toString(),
+      "failed protocol-config substitution changed buyback accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingLiquidity.toString(),
+      treasuryBefore.pendingLiquidity.toString(),
+      "failed protocol-config substitution changed liquidity accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingCompany.toString(),
+      treasuryBefore.pendingCompany.toString(),
+      "failed protocol-config substitution changed company accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingFounder.toString(),
+      treasuryBefore.pendingFounder.toString(),
+      "failed protocol-config substitution changed founder accounting",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "failed protocol-config substitution changed vault balance",
+    );
+
+    await assertAllTreasuryInvariants();
+  });
+
+  it("RT-002C rejects swapped founder and company PDAs without mutation", async () => {
+    const treasuryBefore = await treasury();
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .processFees()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+
+          // Hostile linked-account substitution:
+          // canonical founder and company PDAs are deliberately swapped.
+          founderState: companyStatePda,
+          companyState: founderStatePda,
+
+          settlementVault: settlementVaultPda,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "swapped founder/company PDAs must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "swapped founder/company PDAs should return an error",
+    );
+
+    const treasuryAfter = await treasury();
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      treasuryAfter.totalFeesReceived.toString(),
+      treasuryBefore.totalFeesReceived.toString(),
+      "failed founder/company substitution changed received fees",
+    );
+
+    assert.equal(
+      treasuryAfter.totalFeesAllocated.toString(),
+      treasuryBefore.totalFeesAllocated.toString(),
+      "failed founder/company substitution changed allocated fees",
+    );
+
+    assert.equal(
+      treasuryAfter.processingEpoch.toString(),
+      treasuryBefore.processingEpoch.toString(),
+      "failed founder/company substitution changed processing epoch",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingReserve.toString(),
+      treasuryBefore.pendingReserve.toString(),
+      "failed founder/company substitution changed reserve accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingLiquidity.toString(),
+      treasuryBefore.pendingLiquidity.toString(),
+      "failed founder/company substitution changed liquidity accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingCompany.toString(),
+      treasuryBefore.pendingCompany.toString(),
+      "failed founder/company substitution changed company accounting",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingFounder.toString(),
+      treasuryBefore.pendingFounder.toString(),
+      "failed founder/company substitution changed founder accounting",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "failed founder/company substitution changed vault balance",
+    );
+
+    await assertAllTreasuryInvariants();
+  });
+
+  it("RT-002C rejects a substituted execution-config PDA without token movement", async () => {
+    const treasuryBefore = await treasury();
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const reserveBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .authorizeReserveExecution()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          reserveDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+
+          // Hostile substitution:
+          // protocol_config is supplied where execution_config is required.
+          executionConfig: protocolConfigPda,
+
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "substituted execution-config PDA must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "substituted execution-config PDA should return an error",
+    );
+
+    const treasuryAfter = await treasury();
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const reserveAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingReserve.toString(),
+      treasuryBefore.pendingReserve.toString(),
+      "failed execution-config substitution changed pending reserve",
+    );
+
+    assert.equal(
+      treasuryAfter.releasedReserve.toString(),
+      treasuryBefore.releasedReserve.toString(),
+      "failed execution-config substitution changed released reserve",
+    );
+
+    assert.equal(
+      treasuryAfter.processingEpoch.toString(),
+      treasuryBefore.processingEpoch.toString(),
+      "failed execution-config substitution changed processing epoch",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "failed execution-config substitution changed vault balance",
+    );
+
+    assert.equal(
+      reserveAfter.amount,
+      reserveBefore.amount,
+      "failed execution-config substitution transferred reserve tokens",
+    );
+
+    await assertAllTreasuryInvariants();
+  });
+
+  it("RT-002C rejects a substituted protocol-state PDA without token movement", async () => {
+    const treasuryBefore = await treasury();
+
+    const vaultBefore = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const reserveBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+        .authorizeReserveExecution()
+        .accountsPartial({
+          // Hostile substitution:
+          // execution_config is supplied where canonical protocol_state
+          // is required.
+          protocolState: executionConfigPda,
+
+          protocolConfig: protocolConfigPda,
+          treasury: treasuryStatePda,
+          founderState: founderStatePda,
+          companyState: companyStatePda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          reserveDestination,
+          buybackDestination,
+          liquidityDestination,
+          companyDestination,
+          founderDestination,
+          executionConfig: executionConfigPda,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.equal(
+      rejected,
+      true,
+      "substituted protocol-state PDA must be rejected",
+    );
+
+    assert.notEqual(
+      failureText.length,
+      0,
+      "substituted protocol-state PDA should return an error",
+    );
+
+    const treasuryAfter = await treasury();
+
+    const vaultAfter = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    const reserveAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.equal(
+      treasuryAfter.pendingReserve.toString(),
+      treasuryBefore.pendingReserve.toString(),
+      "failed protocol-state substitution changed pending reserve",
+    );
+
+    assert.equal(
+      treasuryAfter.releasedReserve.toString(),
+      treasuryBefore.releasedReserve.toString(),
+      "failed protocol-state substitution changed released reserve",
+    );
+
+    assert.equal(
+      treasuryAfter.totalFeesAllocated.toString(),
+      treasuryBefore.totalFeesAllocated.toString(),
+      "failed protocol-state substitution changed allocated fees",
+    );
+
+    assert.equal(
+      vaultAfter.amount,
+      vaultBefore.amount,
+      "failed protocol-state substitution changed vault balance",
+    );
+
+    assert.equal(
+      reserveAfter.amount,
+      reserveBefore.amount,
+      "failed protocol-state substitution transferred reserve tokens",
     );
 
     await assertAllTreasuryInvariants();

@@ -8,5 +8,6 @@ pub mod integrity_firewall;
 pub mod liquidity;
 pub mod release;
 pub mod reserve;
+pub mod reserve_deployment;
 pub mod sentinel;
 pub mod waterfall;
