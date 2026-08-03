@@ -90,4 +90,28 @@ pub enum TreasuryRouterError {
 
     #[msg("The Integrity Firewall rejected the supplied account architecture.")]
     IntegrityFirewallViolation,
+
+    #[msg("The Reserve Policy has already been initialized.")]
+    ReservePolicyAlreadyInitialized,
+
+    #[msg("The Reserve Policy minimum floor must be greater than zero.")]
+    InvalidReserveMinimumFloor,
+
+    #[msg("The Reserve Policy liquidity-floor rate is invalid.")]
+    InvalidReserveLiquidityFloorRate,
+
+    #[msg("The Reserve Policy surplus-deployment rate is invalid.")]
+    InvalidReserveDeploymentRate,
+
+    #[msg("The Reserve Policy deployment cooldown must be greater than zero.")]
+    InvalidReserveDeploymentCooldown,
+
+    #[msg("The requested Reserve deployment amount must be greater than zero.")]
+    InvalidReserveDeploymentAmount,
+
+    #[msg("The Reserve deployment cooldown is still active.")]
+    ReserveDeploymentCooldownActive,
+
+    #[msg("The supplied Reserve Policy is not linked to this protocol and treasury.")]
+    InvalidReservePolicyLinkage,
 }

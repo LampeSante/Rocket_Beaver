@@ -45,3 +45,12 @@ pub const INITIAL_FOUNDER_BPS: u16 = 1_000;
 
 /// Initial Survival Waterfall stage.
 pub const INITIAL_WATERFALL_STAGE: u8 = 0;
+
+/// Immutable Reserve Policy PDA seed.
+pub const RESERVE_POLICY_SEED: &[u8] = b"reserve-policy";
+
+/// Initial Reserve Policy account layout version.
+pub const RESERVE_POLICY_VERSION: u16 = 1;
+
+/// Maximum valid basis-point value.
+pub const RESERVE_POLICY_BPS_DENOMINATOR: u16 = 10_000;

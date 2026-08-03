@@ -50,6 +50,22 @@ pub mod treasury_router {
         instructions::initialize_execution_config::handler(ctx)
     }
 
+    pub fn initialize_reserve_policy(
+        ctx: Context<InitializeReservePolicy>,
+        minimum_reserve_floor: u64,
+        liquidity_floor_bps: u16,
+        surplus_deployment_bps: u16,
+        cooldown_seconds: i64,
+    ) -> Result<()> {
+        instructions::initialize_reserve_policy::handler(
+            ctx,
+            minimum_reserve_floor,
+            liquidity_floor_bps,
+            surplus_deployment_bps,
+            cooldown_seconds,
+        )
+    }
+
     pub fn deposit_settlement(ctx: Context<DepositSettlement>, amount: u64) -> Result<()> {
         instructions::deposit_settlement::handler(ctx, amount)
     }
