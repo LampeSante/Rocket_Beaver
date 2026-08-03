@@ -110,6 +110,79 @@ pub fn authorize_release(
     })
 }
 
+/// Computes the exact release amount permitted by RBVR's complete
+/// on-chain security system.
+///
+/// The transaction caller supplies no amount and cannot influence the
+/// transfer value. The release amount is derived from the selected
+/// bucket's pending balance, Waterfall stage, Beaver Score and adaptive Dam.
+pub fn authorize_autonomous_release(
+    protocol: &ProtocolState,
+    treasury: &TreasuryState,
+    bucket: ReleaseBucket,
+) -> Result<ExecutionAuthorization> {
+    require!(!protocol.paused, TreasuryRouterError::ProtocolPaused);
+
+    validate_accounting_integrity(treasury)?;
+
+    require!(
+        treasury.execution_accounting_is_valid(),
+        TreasuryRouterError::AccountingInvariantViolation
+    );
+
+    if bucket == ReleaseBucket::BuybackBurn {
+        require!(
+            !treasury.buybacks_paused,
+            TreasuryRouterError::BuybacksPaused
+        );
+    }
+
+    let waterfall_evaluation = waterfall::evaluate(treasury)?;
+
+    let pre_dam_health_score = beaver_score::pre_dam_health_score(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+    )?;
+
+    let dam_evaluation = dam::evaluate_adaptive(waterfall_evaluation.stage, pre_dam_health_score);
+
+    require!(
+        dam_evaluation.release_bps <= 10_000,
+        TreasuryRouterError::InvalidDamReleaseRate
+    );
+
+    require!(
+        dam_evaluation.level != DamLevel::Filling,
+        TreasuryRouterError::DamClosed
+    );
+
+    let pending_balance = pending_balance(treasury, bucket);
+
+    require!(
+        pending_balance > 0,
+        TreasuryRouterError::InsufficientPendingBalance
+    );
+
+    let maximum_release = calculate_maximum_release(pending_balance, dam_evaluation.release_bps)?;
+
+    require!(
+        maximum_release > 0,
+        TreasuryRouterError::ReleaseLimitExceeded
+    );
+
+    Ok(ExecutionAuthorization {
+        bucket,
+        requested_amount: maximum_release,
+        pending_balance,
+        maximum_release,
+        waterfall_stage: waterfall_evaluation.stage,
+        dam_level: dam_evaluation.level,
+        release_bps: dam_evaluation.release_bps,
+        reserve_ratio_bps: waterfall_evaluation.reserve_ratio_bps,
+    })
+}
+
 /// Ensures fee accounting has never allocated more than was received.
 ///
 /// Exact equality is required before releases. This prevents funds from moving

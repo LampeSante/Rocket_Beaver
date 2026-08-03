@@ -294,6 +294,58 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assert.equal(state.paused, false);
   });
 
+  it("rejects a second protocol initialization", async () => {
+    let rejected = false;
+    let failureText = "";
+
+    try {
+      await program.methods
+            .initialize()
+            .accountsPartial({
+              protocolState: protocolStatePda,
+              authority,
+              systemProgram: SystemProgram.programId,
+            })
+            .rpc();
+    } catch (error) {
+      rejected = true;
+      failureText =
+        error instanceof Error
+          ? `${error.message}\n${error.stack ?? ""}`
+          : String(error);
+    }
+
+    assert.isTrue(
+      rejected,
+      "canonical protocol state must not be initialized twice",
+    );
+
+    assert.isNotEmpty(
+      failureText,
+      "the rejected initialization should return an error",
+    );
+
+    const protocolStateAfter =
+      await program.account.protocolState.fetch(protocolStatePda);
+
+    assert.equal(
+      protocolStateAfter.authority.toBase58(),
+      authority.toBase58(),
+      "failed reinitialization must not alter protocol authority",
+    );
+
+    assert.equal(
+      protocolStateAfter.version,
+      1,
+      "failed reinitialization must not alter protocol version",
+    );
+
+    assert.isFalse(
+      protocolStateAfter.paused,
+      "failed reinitialization must not alter protocol pause state",
+    );
+  });
+
   it("initializes the locked protocol allocation", async () => {
     await program.methods
       .initializeProtocolConfig()
@@ -576,7 +628,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
 
     try {
       await program.methods
-        .authorizeReserveExecution(EXECUTION_AMOUNT)
+        .authorizeReserveExecution()
         .accountsPartial({
           protocolState: protocolStatePda,
           protocolConfig: protocolConfigPda,
@@ -595,7 +647,6 @@ describe("RBVR Treasury Router — protocol integration", function () {
           companyDestination,
           founderDestination,
           executionConfig: executionConfigPda,
-          authority,
           tokenProgram: TOKEN_PROGRAM_ID,
         })
         .rpc();
@@ -652,11 +703,15 @@ describe("RBVR Treasury Router — protocol integration", function () {
     await assertAllTreasuryInvariants();
   });
 
-  it("authorizes and transfers the reserve allocation", async () => {
-    const before = await getAccount(provider.connection, reserveDestination);
+  it("autonomously transfers the reserve allocation", async () => {
+    const destinationBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+    const treasuryBefore = await treasury();
 
     await program.methods
-      .authorizeReserveExecution(EXECUTION_AMOUNT)
+      .authorizeReserveExecution()
       .accountsPartial({
         protocolState: protocolStatePda,
         protocolConfig: protocolConfigPda,
@@ -671,31 +726,46 @@ describe("RBVR Treasury Router — protocol integration", function () {
         companyDestination,
         founderDestination,
         executionConfig: executionConfigPda,
-        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
-    const after = await getAccount(provider.connection, reserveDestination);
+    const destinationAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+    const treasuryAfter = await treasury();
+
+    const released = destinationAfter.amount - destinationBefore.amount;
+
+    assert(released > 0n, "reserve release must be positive");
 
     assert.equal(
-      after.amount - before.amount,
-      BigInt(EXECUTION_AMOUNT.toString()),
+      treasuryBefore.pendingReserve
+        .sub(treasuryAfter.pendingReserve)
+        .toString(),
+      released.toString(),
     );
 
-    const state = await treasury();
-
-    assertBn(state.pendingReserve, 290_000);
-    assertBn(state.releasedReserve, 10_000);
+    assert.equal(
+      treasuryAfter.releasedReserve
+        .sub(treasuryBefore.releasedReserve)
+        .toString(),
+      released.toString(),
+    );
 
     await assertAllTreasuryInvariants();
   });
 
-  it("authorizes and transfers the liquidity allocation", async () => {
-    const before = await getAccount(provider.connection, liquidityDestination);
+  it("autonomously transfers the liquidity allocation", async () => {
+    const destinationBefore = await getAccount(
+      provider.connection,
+      liquidityDestination,
+    );
+    const treasuryBefore = await treasury();
 
     await program.methods
-      .authorizeLiquidityExecution(EXECUTION_AMOUNT)
+      .authorizeLiquidityExecution()
       .accountsPartial({
         protocolState: protocolStatePda,
         protocolConfig: protocolConfigPda,
@@ -710,31 +780,48 @@ describe("RBVR Treasury Router — protocol integration", function () {
         companyDestination,
         founderDestination,
         executionConfig: executionConfigPda,
-        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
-    const after = await getAccount(provider.connection, liquidityDestination);
+    const destinationAfter = await getAccount(
+      provider.connection,
+      liquidityDestination,
+    );
+    const treasuryAfter = await treasury();
+
+    const released = destinationAfter.amount - destinationBefore.amount;
+
+    assert(released > 0n, "liquidity release must be positive");
 
     assert.equal(
-      after.amount - before.amount,
-      BigInt(EXECUTION_AMOUNT.toString()),
+      treasuryBefore.pendingLiquidity
+        .sub(treasuryAfter.pendingLiquidity)
+        .toString(),
+      released.toString(),
     );
 
-    const state = await treasury();
-
-    assertBn(state.pendingLiquidity, 190_000);
-    assertBn(state.releasedLiquidity, 10_000);
+    assert.equal(
+      treasuryAfter.releasedLiquidity
+        .sub(treasuryBefore.releasedLiquidity)
+        .toString(),
+      released.toString(),
+    );
 
     await assertAllTreasuryInvariants();
   });
 
-  it("authorizes and transfers the company allocation", async () => {
-    const before = await getAccount(provider.connection, companyDestination);
+  it("autonomously transfers the company allocation", async () => {
+    const destinationBefore = await getAccount(
+      provider.connection,
+      companyDestination,
+    );
+    const treasuryBefore = await treasury();
+    const companyBefore =
+      await program.account.companyState.fetch(companyStatePda);
 
     await program.methods
-      .authorizeCompanyExecution(EXECUTION_AMOUNT)
+      .authorizeCompanyExecution()
       .accountsPartial({
         protocolState: protocolStatePda,
         companyState: companyStatePda,
@@ -743,37 +830,62 @@ describe("RBVR Treasury Router — protocol integration", function () {
         settlementMint,
         settlementVault: settlementVaultPda,
         companyDestination,
-        authority: payer.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
-    const after = await getAccount(provider.connection, companyDestination);
+    const destinationAfter = await getAccount(
+      provider.connection,
+      companyDestination,
+    );
+    const treasuryAfter = await treasury();
+    const companyAfter =
+      await program.account.companyState.fetch(companyStatePda);
+
+    const released = destinationAfter.amount - destinationBefore.amount;
+
+    assert(released > 0n, "company release must be positive");
 
     assert.equal(
-      after.amount - before.amount,
-      BigInt(EXECUTION_AMOUNT.toString()),
+      treasuryBefore.pendingCompany
+        .sub(treasuryAfter.pendingCompany)
+        .toString(),
+      released.toString(),
     );
 
-    const state = await treasury();
+    assert.equal(
+      treasuryAfter.releasedCompany
+        .sub(treasuryBefore.releasedCompany)
+        .toString(),
+      released.toString(),
+    );
 
-    assertBn(state.pendingCompany, 190_000);
-    assertBn(state.releasedCompany, 10_000);
+    assert.equal(
+      companyAfter.spentCurrentPeriod.toString(),
+      companyBefore.spentCurrentPeriod.toString(),
+      "release must not change company period-cap accounting",
+    );
 
-    const company = await program.account.companyState.fetch(companyStatePda);
-
-    assertBn(company.spentCurrentPeriod, 200_000);
-
-    assertBn(company.lifetimeSpent, 200_000);
+    assert.equal(
+      companyAfter.lifetimeSpent.toString(),
+      companyBefore.lifetimeSpent.toString(),
+      "release must not change company lifetime accounting",
+    );
 
     await assertAllTreasuryInvariants();
   });
 
-  it("authorizes and transfers founder compensation", async () => {
-    const before = await getAccount(provider.connection, founderDestination);
+  it("autonomously transfers founder compensation", async () => {
+    const destinationBefore = await getAccount(
+      provider.connection,
+      founderDestination,
+    );
+    const treasuryBefore = await treasury();
+    const founderBefore =
+      await program.account.founderState.fetch(founderStatePda);
 
     await program.methods
-      .authorizeFounderExecution(EXECUTION_AMOUNT)
+      .authorizeFounderExecution()
       .accountsPartial({
         protocolState: protocolStatePda,
         founderState: founderStatePda,
@@ -782,37 +894,60 @@ describe("RBVR Treasury Router — protocol integration", function () {
         settlementMint,
         settlementVault: settlementVaultPda,
         founderDestination,
-        authority: payer.publicKey,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
-    const after = await getAccount(provider.connection, founderDestination);
+    const destinationAfter = await getAccount(
+      provider.connection,
+      founderDestination,
+    );
+    const treasuryAfter = await treasury();
+    const founderAfter =
+      await program.account.founderState.fetch(founderStatePda);
+
+    const released = destinationAfter.amount - destinationBefore.amount;
+
+    assert(released > 0n, "founder release must be positive");
 
     assert.equal(
-      after.amount - before.amount,
-      BigInt(EXECUTION_AMOUNT.toString()),
+      treasuryBefore.pendingFounder
+        .sub(treasuryAfter.pendingFounder)
+        .toString(),
+      released.toString(),
     );
 
-    const state = await treasury();
+    assert.equal(
+      treasuryAfter.releasedFounder
+        .sub(treasuryBefore.releasedFounder)
+        .toString(),
+      released.toString(),
+    );
 
-    assertBn(state.pendingFounder, 90_000);
-    assertBn(state.releasedFounder, 10_000);
+    assert.equal(
+      founderAfter.earnedCurrentPeriod.toString(),
+      founderBefore.earnedCurrentPeriod.toString(),
+      "release must not change founder period-cap accounting",
+    );
 
-    const founder = await program.account.founderState.fetch(founderStatePda);
-
-    assertBn(founder.earnedCurrentPeriod, 100_000);
-
-    assertBn(founder.lifetimeEarned, 100_000);
+    assert.equal(
+      founderAfter.lifetimeEarned.toString(),
+      founderBefore.lifetimeEarned.toString(),
+      "release must not change founder lifetime accounting",
+    );
 
     await assertAllTreasuryInvariants();
   });
 
-  it("authorizes and transfers the buyback allocation", async () => {
-    const before = await getAccount(provider.connection, buybackDestination);
+  it("autonomously transfers the buyback allocation", async () => {
+    const destinationBefore = await getAccount(
+      provider.connection,
+      buybackDestination,
+    );
+    const treasuryBefore = await treasury();
 
     await program.methods
-      .authorizeBuybackExecution(EXECUTION_AMOUNT)
+      .authorizeBuybackExecution()
       .accountsPartial({
         protocolState: protocolStatePda,
         protocolConfig: protocolConfigPda,
@@ -827,23 +962,33 @@ describe("RBVR Treasury Router — protocol integration", function () {
         companyDestination,
         founderDestination,
         executionConfig: executionConfigPda,
-        authority,
         tokenProgram: TOKEN_PROGRAM_ID,
       })
       .rpc();
 
-    const after = await getAccount(provider.connection, buybackDestination);
+    const destinationAfter = await getAccount(
+      provider.connection,
+      buybackDestination,
+    );
+    const treasuryAfter = await treasury();
+
+    const released = destinationAfter.amount - destinationBefore.amount;
+
+    assert(released > 0n, "buyback release must be positive");
 
     assert.equal(
-      after.amount - before.amount,
-      BigInt(EXECUTION_AMOUNT.toString()),
+      treasuryBefore.pendingBuybackBurn
+        .sub(treasuryAfter.pendingBuybackBurn)
+        .toString(),
+      released.toString(),
     );
 
-    const state = await treasury();
-
-    assertBn(state.pendingBuybackBurn, 190_000);
-
-    assertBn(state.releasedBuybackBurn, 10_000);
+    assert.equal(
+      treasuryAfter.releasedBuybackBurn
+        .sub(treasuryBefore.releasedBuybackBurn)
+        .toString(),
+      released.toString(),
+    );
 
     await assertAllTreasuryInvariants();
   });
@@ -863,20 +1008,31 @@ describe("RBVR Treasury Router — protocol integration", function () {
       .add(state.releasedCompany)
       .add(state.releasedFounder);
 
-    assertBn(totalPending, 950_000);
-    assertBn(totalReleased, 50_000);
-
-    assertBn(totalPending.add(totalReleased), state.totalFeesAllocated);
-
-    const vault = await getAccount(provider.connection, settlementVaultPda);
-
-    assert.equal(
-      vault.amount,
-      BigInt(950_000),
-      "vault token balance must equal total pending balance",
+    assertBn(
+      totalPending.add(totalReleased),
+      state.totalFeesAllocated,
     );
 
-    assert(number(state.processingEpoch) >= 1, "processing epoch must advance");
+    const vault = await getAccount(
+      provider.connection,
+      settlementVaultPda,
+    );
+
+    assert.equal(
+      vault.amount.toString(),
+      totalPending.toString(),
+      "vault balance must equal total pending accounting",
+    );
+
+    assert(
+      totalReleased.gt(new anchor.BN(0)),
+      "autonomous execution must release settlement assets",
+    );
+
+    assert(
+      number(state.processingEpoch) >= 1,
+      "processing epoch must advance",
+    );
 
     await assertAllTreasuryInvariants();
   });

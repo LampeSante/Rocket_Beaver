@@ -51,3 +51,10 @@ path = "fuzz_targets/process_fees.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "process_release"
+path = "fuzz_targets/process_release.rs"
+test = false
+doc = false
+bench = false

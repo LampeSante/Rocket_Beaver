@@ -8,7 +8,6 @@ use anchor_lang::prelude::*;
 pub struct ReserveExecutionAuthorized {
     pub protocol: Pubkey,
     pub treasury: Pubkey,
-    pub authority: Pubkey,
     pub authorized_amount: u64,
     pub previous_pending_balance: u64,
     pub remaining_pending_balance: u64,
@@ -30,7 +29,6 @@ pub struct ReserveExecutionAuthorized {
 pub struct BuybackExecutionAuthorized {
     pub protocol: Pubkey,
     pub treasury: Pubkey,
-    pub authority: Pubkey,
     pub authorized_amount: u64,
     pub previous_pending_balance: u64,
     pub remaining_pending_balance: u64,
@@ -52,7 +50,6 @@ pub struct BuybackExecutionAuthorized {
 pub struct LiquidityExecutionAuthorized {
     pub protocol: Pubkey,
     pub treasury: Pubkey,
-    pub authority: Pubkey,
     pub authorized_amount: u64,
     pub previous_pending_balance: u64,
     pub remaining_pending_balance: u64,
@@ -75,7 +72,6 @@ pub struct FounderExecutionAuthorized {
     pub protocol: Pubkey,
     pub treasury: Pubkey,
     pub founder_state: Pubkey,
-    pub authority: Pubkey,
     pub recipient: Pubkey,
     pub authorized_amount: u64,
     pub previous_pending_balance: u64,
@@ -102,7 +98,6 @@ pub struct CompanyExecutionAuthorized {
     pub protocol: Pubkey,
     pub treasury: Pubkey,
     pub company_state: Pubkey,
-    pub authority: Pubkey,
     pub recipient: Pubkey,
     pub authorized_amount: u64,
     pub previous_pending_balance: u64,

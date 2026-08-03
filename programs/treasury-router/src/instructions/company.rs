@@ -3,7 +3,8 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 
 use crate::{
     constants::{COMPANY_STATE_SEED, EXECUTION_CONFIG_SEED, PROTOCOL_SEED, TREASURY_SEED},
-    engines::execution_guard::{authorize_release, ReleaseBucket},
+    engines::execution_guard::{authorize_autonomous_release, ReleaseBucket},
+    engines::release::process_release,
     errors::TreasuryRouterError,
     events::CompanyExecutionAuthorized,
     state::{CompanyState, ExecutionConfig, ProtocolState, TreasuryState},
@@ -14,7 +15,6 @@ pub struct AuthorizeCompanyExecution<'info> {
     #[account(
         seeds = [PROTOCOL_SEED],
         bump = protocol_state.bump,
-        has_one = authority,
         constraint = protocol_state.treasury_state != Pubkey::default()
             @ TreasuryRouterError::TreasuryNotInitialized,
         constraint = protocol_state.treasury_state == treasury.key()
@@ -96,8 +96,8 @@ pub struct AuthorizeCompanyExecution<'info> {
     )]
     pub company_destination: Box<Account<'info, TokenAccount>>,
 
-    pub authority: Signer<'info>,
-
+    /// Permissionless transaction caller and fee payer.
+    /// This signer does not need to match ProtocolState.authority.
     pub token_program: Program<'info, Token>,
 }
 
@@ -108,13 +108,14 @@ pub struct AuthorizeCompanyExecution<'info> {
 /// company spending or modify the company cap counters.
 ///
 /// The settlement-token transfer and treasury accounting update are atomic.
-pub fn handler(ctx: Context<AuthorizeCompanyExecution>, amount: u64) -> Result<()> {
-    let authorization = authorize_release(
+pub fn handler(ctx: Context<AuthorizeCompanyExecution>) -> Result<()> {
+    let authorization = authorize_autonomous_release(
         &ctx.accounts.protocol_state,
         &ctx.accounts.treasury,
         ReleaseBucket::Company,
-        amount,
     )?;
+
+    let amount = authorization.maximum_release;
 
     let protocol_key = ctx.accounts.protocol_state.key();
     let treasury_bump = [ctx.accounts.treasury.bump];
@@ -140,35 +141,17 @@ pub fn handler(ctx: Context<AuthorizeCompanyExecution>, amount: u64) -> Result<(
 
     let clock = Clock::get()?;
 
-    let previous_pending_balance = ctx.accounts.treasury.pending_company;
-    let previous_released_balance = ctx.accounts.treasury.released_company;
+    let transition = process_release(&mut ctx.accounts.treasury, ReleaseBucket::Company, amount)?;
 
-    ctx.accounts.treasury.pending_company = previous_pending_balance
-        .checked_sub(amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    ctx.accounts.treasury.released_company = previous_released_balance
-        .checked_add(amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    require!(
-        ctx.accounts.treasury.company_accounting_is_valid(),
-        TreasuryRouterError::AccountingInvariantViolation
-    );
-
-    require!(
-        ctx.accounts.treasury.execution_accounting_is_valid(),
-        TreasuryRouterError::AccountingInvariantViolation
-    );
-
-    let remaining_pending_balance = ctx.accounts.treasury.pending_company;
-    let total_released_balance = ctx.accounts.treasury.released_company;
+    let previous_pending_balance = transition.previous_pending_balance;
+    let remaining_pending_balance = transition.remaining_pending_balance;
+    let previous_released_balance = transition.previous_released_balance;
+    let total_released_balance = transition.total_released_balance;
 
     emit!(CompanyExecutionAuthorized {
         protocol: ctx.accounts.protocol_state.key(),
         treasury: ctx.accounts.treasury.key(),
         company_state: ctx.accounts.company_state.key(),
-        authority: ctx.accounts.authority.key(),
         recipient: ctx.accounts.company_state.recipient,
         authorized_amount: amount,
         previous_pending_balance,

@@ -178,7 +178,7 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
     let post_linkage_report = sentinel::evaluate_linkage(
         ctx.accounts.protocol_state.key(),
         &ctx.accounts.protocol_config,
-        &*ctx.accounts.treasury,
+        &ctx.accounts.treasury,
     );
 
     require!(
@@ -187,7 +187,7 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
     );
 
     let post_sentinel_report =
-        sentinel::evaluate(&ctx.accounts.protocol_config, &*ctx.accounts.treasury)?;
+        sentinel::evaluate(&ctx.accounts.protocol_config, &ctx.accounts.treasury)?;
 
     require!(
         post_sentinel_report.healthy,

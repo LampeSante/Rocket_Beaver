@@ -58,38 +58,23 @@ pub mod treasury_router {
         instructions::process_fees::handler(ctx)
     }
 
-    pub fn authorize_reserve_execution(
-        ctx: Context<AuthorizeReserveExecution>,
-        amount: u64,
-    ) -> Result<()> {
-        instructions::reserve::handler(ctx, amount)
+    pub fn authorize_reserve_execution(ctx: Context<AuthorizeReserveExecution>) -> Result<()> {
+        instructions::reserve::handler(ctx)
     }
 
-    pub fn authorize_buyback_execution(
-        ctx: Context<AuthorizeBuybackExecution>,
-        amount: u64,
-    ) -> Result<()> {
-        instructions::buyback::handler(ctx, amount)
+    pub fn authorize_buyback_execution(ctx: Context<AuthorizeBuybackExecution>) -> Result<()> {
+        instructions::buyback::handler(ctx)
     }
 
-    pub fn authorize_liquidity_execution(
-        ctx: Context<AuthorizeLiquidityExecution>,
-        amount: u64,
-    ) -> Result<()> {
-        instructions::liquidity::handler(ctx, amount)
+    pub fn authorize_liquidity_execution(ctx: Context<AuthorizeLiquidityExecution>) -> Result<()> {
+        instructions::liquidity::handler(ctx)
     }
 
-    pub fn authorize_founder_execution(
-        ctx: Context<AuthorizeFounderExecution>,
-        amount: u64,
-    ) -> Result<()> {
-        instructions::founder::handler(ctx, amount)
+    pub fn authorize_founder_execution(ctx: Context<AuthorizeFounderExecution>) -> Result<()> {
+        instructions::founder::handler(ctx)
     }
 
-    pub fn authorize_company_execution(
-        ctx: Context<AuthorizeCompanyExecution>,
-        amount: u64,
-    ) -> Result<()> {
-        instructions::company::handler(ctx, amount)
+    pub fn authorize_company_execution(ctx: Context<AuthorizeCompanyExecution>) -> Result<()> {
+        instructions::company::handler(ctx)
     }
 }

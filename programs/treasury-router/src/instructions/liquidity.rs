@@ -7,10 +7,11 @@ use crate::{
         PROTOCOL_SEED, TREASURY_SEED,
     },
     engines::{
-        execution_guard::{authorize_release, ReleaseBucket},
+        execution_guard::{authorize_autonomous_release, ReleaseBucket},
         integrity_firewall::{
             evaluate_integrity, IntegrityAccountKeys, IntegrityDestinations, TokenAccountFacts,
         },
+        release::process_release,
     },
     errors::TreasuryRouterError,
     events::LiquidityExecutionAuthorized,
@@ -24,7 +25,6 @@ pub struct AuthorizeLiquidityExecution<'info> {
     #[account(
         seeds = [PROTOCOL_SEED],
         bump = protocol_state.bump,
-        has_one = authority,
         constraint = protocol_state.treasury_state != Pubkey::default()
             @ TreasuryRouterError::TreasuryNotInitialized,
         constraint = protocol_state.treasury_state == treasury.key()
@@ -174,8 +174,8 @@ pub struct AuthorizeLiquidityExecution<'info> {
     )]
     pub founder_destination: Box<Account<'info, TokenAccount>>,
 
-    pub authority: Signer<'info>,
-
+    /// Permissionless transaction caller and fee payer.
+    /// This signer does not need to match ProtocolState.authority.
     pub token_program: Program<'info, Token>,
 }
 
@@ -185,7 +185,7 @@ pub struct AuthorizeLiquidityExecution<'info> {
 /// the specified liquidity destination and updates execution accounting.
 ///
 /// It does not allocate fees, execute a swap, or create an LP position.
-pub fn handler(ctx: Context<AuthorizeLiquidityExecution>, amount: u64) -> Result<()> {
+pub fn handler(ctx: Context<AuthorizeLiquidityExecution>) -> Result<()> {
     let integrity_report = evaluate_integrity(
         crate::ID,
         IntegrityAccountKeys {
@@ -246,12 +246,13 @@ pub fn handler(ctx: Context<AuthorizeLiquidityExecution>, amount: u64) -> Result
         integrity_report.failure_mask
     );
 
-    let authorization = authorize_release(
+    let authorization = authorize_autonomous_release(
         &ctx.accounts.protocol_state,
         &ctx.accounts.treasury,
         ReleaseBucket::Liquidity,
-        amount,
     )?;
+
+    let amount = authorization.maximum_release;
 
     let protocol_key = ctx.accounts.protocol_state.key();
     let treasury_bump = [ctx.accounts.treasury.bump];
@@ -277,34 +278,16 @@ pub fn handler(ctx: Context<AuthorizeLiquidityExecution>, amount: u64) -> Result
 
     let clock = Clock::get()?;
 
-    let previous_pending_balance = ctx.accounts.treasury.pending_liquidity;
-    let previous_released_balance = ctx.accounts.treasury.released_liquidity;
+    let transition = process_release(&mut ctx.accounts.treasury, ReleaseBucket::Liquidity, amount)?;
 
-    ctx.accounts.treasury.pending_liquidity = previous_pending_balance
-        .checked_sub(amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    ctx.accounts.treasury.released_liquidity = previous_released_balance
-        .checked_add(amount)
-        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
-
-    require!(
-        ctx.accounts.treasury.liquidity_accounting_is_valid(),
-        TreasuryRouterError::AccountingInvariantViolation
-    );
-
-    require!(
-        ctx.accounts.treasury.execution_accounting_is_valid(),
-        TreasuryRouterError::AccountingInvariantViolation
-    );
-
-    let remaining_pending_balance = ctx.accounts.treasury.pending_liquidity;
-    let total_released_balance = ctx.accounts.treasury.released_liquidity;
+    let previous_pending_balance = transition.previous_pending_balance;
+    let remaining_pending_balance = transition.remaining_pending_balance;
+    let previous_released_balance = transition.previous_released_balance;
+    let total_released_balance = transition.total_released_balance;
 
     emit!(LiquidityExecutionAuthorized {
         protocol: ctx.accounts.protocol_state.key(),
         treasury: ctx.accounts.treasury.key(),
-        authority: ctx.accounts.authority.key(),
         authorized_amount: amount,
         previous_pending_balance,
         remaining_pending_balance,
