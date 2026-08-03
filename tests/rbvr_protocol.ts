@@ -53,7 +53,6 @@ describe("RBVR Treasury Router — protocol integration", function () {
 
   const founderRecipientOwner = Keypair.generate();
   const companyRecipientOwner = Keypair.generate();
-  const reserveRecipientOwner = Keypair.generate();
   const liquidityRecipientOwner = Keypair.generate();
   const buybackRecipientOwner = Keypair.generate();
 
@@ -90,6 +89,11 @@ describe("RBVR Treasury Router — protocol integration", function () {
 
     [settlementVaultPda] = PublicKey.findProgramAddressSync(
       [Buffer.from("treasury-vault"), treasuryStatePda.toBuffer()],
+      PROGRAM_ID,
+    );
+
+    [reserveDestination] = PublicKey.findProgramAddressSync(
+      [Buffer.from("reserve-vault"), treasuryStatePda.toBuffer()],
       PROGRAM_ID,
     );
 
@@ -226,15 +230,6 @@ describe("RBVR Treasury Router — protocol integration", function () {
       )
     ).address;
 
-    reserveDestination = (
-      await getOrCreateAssociatedTokenAccount(
-        provider.connection,
-        payer,
-        settlementMint,
-        reserveRecipientOwner.publicKey,
-      )
-    ).address;
-
     liquidityDestination = (
       await getOrCreateAssociatedTokenAccount(
         provider.connection,
@@ -275,6 +270,15 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assert.notEqual(protocolConfigPda.toBase58(), treasuryStatePda.toBase58());
 
     assert.notEqual(founderStatePda.toBase58(), companyStatePda.toBase58());
+
+    assert.equal(
+      reserveDestination.toBase58(),
+      PublicKey.findProgramAddressSync(
+        [Buffer.from("reserve-vault"), treasuryStatePda.toBuffer()],
+        PROGRAM_ID,
+      )[0].toBase58(),
+      "Reserve Vault must use the canonical PDA",
+    );
   });
 
   it("initializes the protocol state", async () => {
@@ -1386,6 +1390,7 @@ describe("RBVR Treasury Router — protocol integration", function () {
         founderDestination,
         executionConfig: executionConfigPda,
         authority,
+        tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
       })
       .rpc();
@@ -1400,6 +1405,23 @@ describe("RBVR Treasury Router — protocol integration", function () {
     assert.equal(
       config.reserveDestination.toBase58(),
       reserveDestination.toBase58(),
+    );
+
+    const reserveVault = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    assert.equal(
+      reserveVault.mint.toBase58(),
+      settlementMint.toBase58(),
+      "Reserve Vault must use the settlement mint",
+    );
+
+    assert.equal(
+      reserveVault.owner.toBase58(),
+      treasuryStatePda.toBase58(),
+      "TreasuryState must be the Reserve Vault token authority",
     );
 
     assert.equal(
@@ -1455,7 +1477,8 @@ describe("RBVR Treasury Router — protocol integration", function () {
           founderDestination,
           executionConfig: executionConfigPda,
           authority,
-          systemProgram: SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
         })
         .rpc();
     } catch {

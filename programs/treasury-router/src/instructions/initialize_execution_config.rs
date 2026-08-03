@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 
 use crate::{
     constants::{
         COMPANY_STATE_SEED, EXECUTION_CONFIG_SEED, EXECUTION_CONFIG_VERSION, FOUNDER_STATE_SEED,
-        PROTOCOL_SEED, TREASURY_SEED,
+        PROTOCOL_SEED, RESERVE_VAULT_SEED, TREASURY_SEED,
     },
     errors::TreasuryRouterError,
     state::{CompanyState, ExecutionConfig, FounderState, ProtocolState, TreasuryState},
@@ -80,9 +80,21 @@ pub struct InitializeExecutionConfig<'info> {
     )]
     pub settlement_vault: Box<Account<'info, TokenAccount>>,
 
+    /// Canonical protocol-controlled Reserve Vault.
+    ///
+    /// The account is created exactly once alongside the immutable
+    /// ExecutionConfig. TreasuryState is the SPL token authority, so no
+    /// external wallet can withdraw reserve assets.
     #[account(
-        constraint = reserve_destination.mint == settlement_mint.key()
-            @ TreasuryRouterError::InvalidSettlementMint
+        init,
+        payer = authority,
+        seeds = [
+            RESERVE_VAULT_SEED,
+            treasury.key().as_ref()
+        ],
+        bump,
+        token::mint = settlement_mint,
+        token::authority = treasury
     )]
     pub reserve_destination: Box<Account<'info, TokenAccount>>,
 
@@ -129,6 +141,7 @@ pub struct InitializeExecutionConfig<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -240,7 +253,8 @@ pub fn handler(ctx: Context<InitializeExecutionConfig>) -> Result<()> {
     );
     msg!("ProtocolState: {}", execution_config.protocol_state);
     msg!("Settlement mint: {}", execution_config.settlement_mint);
-    msg!("Reserve destination: {}", reserve_destination);
+    msg!("Protocol Reserve Vault: {}", reserve_destination);
+    msg!("Reserve Vault authority: {}", ctx.accounts.treasury.key());
     msg!("Buyback destination: {}", buyback_destination);
     msg!("Liquidity destination: {}", liquidity_destination);
     msg!("Company destination: {}", company_destination);

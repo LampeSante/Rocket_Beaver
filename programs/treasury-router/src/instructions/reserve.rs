@@ -4,7 +4,7 @@ use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 use crate::{
     constants::{
         COMPANY_STATE_SEED, EXECUTION_CONFIG_SEED, FOUNDER_STATE_SEED, PROTOCOL_CONFIG_SEED,
-        PROTOCOL_SEED, TREASURY_SEED,
+        PROTOCOL_SEED, RESERVE_VAULT_SEED, TREASURY_SEED,
     },
     engines::{
         execution_guard::{authorize_autonomous_release, ReleaseBucket},
@@ -117,16 +117,23 @@ pub struct AuthorizeReserveExecution<'info> {
     )]
     pub settlement_vault: Box<Account<'info, TokenAccount>>,
 
-    /// Reserve-controlled settlement-token account receiving the release.
+    /// Canonical protocol-controlled Reserve Vault receiving reserve funding.
     #[account(
         mut,
+        seeds = [
+            RESERVE_VAULT_SEED,
+            treasury.key().as_ref()
+        ],
+        bump,
         constraint = reserve_destination.key()
             == execution_config.reserve_destination
                 @ TreasuryRouterError::InvalidExecutionDestination,
         constraint = reserve_destination.key() != settlement_vault.key()
             @ TreasuryRouterError::InvalidExecutionDestination,
         constraint = reserve_destination.mint == settlement_mint.key()
-            @ TreasuryRouterError::InvalidSettlementMint
+            @ TreasuryRouterError::InvalidSettlementMint,
+        constraint = reserve_destination.owner == treasury.key()
+            @ TreasuryRouterError::InvalidExecutionDestination
     )]
     pub reserve_destination: Box<Account<'info, TokenAccount>>,
 
@@ -304,14 +311,14 @@ pub fn handler(ctx: Context<AuthorizeReserveExecution>) -> Result<()> {
         authorized_at: clock.unix_timestamp,
     });
 
-    msg!("Reserve settlement-token execution completed");
+    msg!("Reserve Vault funding completed");
     msg!("Transferred amount in base units: {}", amount);
     msg!(
         "Treasury settlement vault: {}",
         ctx.accounts.settlement_vault.key()
     );
     msg!(
-        "Reserve destination: {}",
+        "Protocol Reserve Vault: {}",
         ctx.accounts.reserve_destination.key()
     );
     msg!(

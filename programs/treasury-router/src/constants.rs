@@ -10,6 +10,9 @@ pub const TREASURY_SEED: &[u8] = b"treasury";
 /// Treasury SPL settlement-token vault PDA.
 pub const TREASURY_VAULT_SEED: &[u8] = b"treasury-vault";
 
+/// Protocol-controlled reserve settlement-token vault.
+pub const RESERVE_VAULT_SEED: &[u8] = b"reserve-vault";
+
 /// Founder module PDA seed.
 pub const FOUNDER_STATE_SEED: &[u8] = b"founder-state";
 
