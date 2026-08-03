@@ -2928,4 +2928,125 @@ describe("RBVR Treasury Router — protocol integration", function () {
 
     await assertAllTreasuryInvariants();
   });
+
+  it("deploys only Reserve surplus through the permissionless Spillway", async () => {
+    const [reservePolicyPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("reserve-policy"),
+        treasuryStatePda.toBuffer(),
+      ],
+      PROGRAM_ID,
+    );
+
+    const reserveBefore = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    const liquidityBefore = await getAccount(
+      provider.connection,
+      liquidityDestination,
+    );
+
+    assert.isTrue(
+      reserveBefore.amount > 100_000n,
+      "Reserve Vault must contain enough value to test a protected floor",
+    );
+
+    /*
+     * Lock the absolute floor exactly 100,000 base units beneath the
+     * current Reserve balance. With a 50% deployment rate, the first
+     * Spillway execution must deploy exactly 50,000 units.
+     *
+     * The liquidity-floor rate is zero in this integration test so the
+     * expected amount depends only on the absolute immutable floor.
+     */
+    const minimumFloor = reserveBefore.amount - 100_000n;
+
+    await program.methods
+      .initializeReservePolicy(
+        new anchor.BN(minimumFloor.toString()),
+        0,
+        5_000,
+        new anchor.BN(1),
+      )
+      .accountsPartial({
+        protocolState: protocolStatePda,
+        treasury: treasuryStatePda,
+        reservePolicy: reservePolicyPda,
+        authority,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const policyBefore =
+      await program.account.reservePolicy.fetch(reservePolicyPda);
+
+    assert.equal(
+      policyBefore.minimumReserveFloor.toString(),
+      minimumFloor.toString(),
+    );
+
+    assert.equal(policyBefore.liquidityFloorBps, 0);
+    assert.equal(policyBefore.surplusDeploymentBps, 5_000);
+    assert.equal(policyBefore.lifetimeDeployed.toString(), "0");
+
+    await program.methods
+      .spillwayRelease()
+      .accountsPartial({
+        protocolState: protocolStatePda,
+        treasury: treasuryStatePda,
+        executionConfig: executionConfigPda,
+        reservePolicy: reservePolicyPda,
+        settlementMint,
+        reserveVault: reserveDestination,
+        liquidityDestination,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .rpc();
+
+    const reserveAfter = await getAccount(
+      provider.connection,
+      reserveDestination,
+    );
+
+    const liquidityAfter = await getAccount(
+      provider.connection,
+      liquidityDestination,
+    );
+
+    const policyAfter =
+      await program.account.reservePolicy.fetch(reservePolicyPda);
+
+    const expectedDeployment = 50_000n;
+
+    assert.equal(
+      (reserveBefore.amount - reserveAfter.amount).toString(),
+      expectedDeployment.toString(),
+      "Spillway must debit only the policy-approved surplus amount",
+    );
+
+    assert.equal(
+      (liquidityAfter.amount - liquidityBefore.amount).toString(),
+      expectedDeployment.toString(),
+      "Spillway must send the approved amount to Liquidity Growth",
+    );
+
+    assert.isAtLeast(
+      Number(reserveAfter.amount),
+      Number(minimumFloor),
+      "Spillway must never breach the protected Reserve floor",
+    );
+
+    assert.equal(
+      policyAfter.lifetimeDeployed.toString(),
+      expectedDeployment.toString(),
+    );
+
+    assert.isAbove(
+      Number(policyAfter.lastDeployedAt),
+      0,
+      "Successful Spillway execution must record its timestamp",
+    );
+  });
 });

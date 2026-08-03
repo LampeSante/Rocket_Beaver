@@ -114,4 +114,16 @@ pub enum TreasuryRouterError {
 
     #[msg("The supplied Reserve Policy is not linked to this protocol and treasury.")]
     InvalidReservePolicyLinkage,
+
+    #[msg("The Reserve Vault does not currently contain deployable surplus.")]
+    NoDeployableReserveSurplus,
+
+    #[msg("The Reserve deployment calculation failed closed.")]
+    ReserveDeploymentEvaluationFailed,
+
+    #[msg("The Spillway destination is invalid.")]
+    InvalidSpillwayDestination,
+
+    #[msg("The Spillway would breach the protected Reserve floor.")]
+    ReserveFloorViolation,
 }

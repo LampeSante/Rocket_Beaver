@@ -114,3 +114,25 @@ pub struct CompanyExecutionAuthorized {
     pub company_lifetime_spent: u64,
     pub authorized_at: i64,
 }
+
+/// Emitted after a successful permissionless Reserve Spillway release.
+#[event]
+pub struct SpillwayReleaseExecuted {
+    pub protocol: Pubkey,
+    pub treasury: Pubkey,
+    pub reserve_policy: Pubkey,
+    pub reserve_vault: Pubkey,
+    pub destination: Pubkey,
+
+    pub reserve_balance_before: u64,
+    pub protected_floor: u64,
+    pub gross_surplus: u64,
+    pub deployed_amount: u64,
+    pub reserve_balance_after: u64,
+
+    pub liquidity_reference: u64,
+    pub deployment_bps: u16,
+
+    pub lifetime_deployed: u64,
+    pub executed_at: i64,
+}

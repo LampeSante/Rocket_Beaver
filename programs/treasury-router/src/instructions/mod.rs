@@ -14,6 +14,7 @@ pub mod initialize_treasury;
 pub mod liquidity;
 pub mod process_fees;
 pub mod reserve;
+pub mod spillway_release;
 
 pub use buyback::*;
 pub use company::*;
@@ -29,3 +30,4 @@ pub use initialize_treasury::*;
 pub use liquidity::*;
 pub use process_fees::*;
 pub use reserve::*;
+pub use spillway_release::*;

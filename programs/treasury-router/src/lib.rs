@@ -78,6 +78,10 @@ pub mod treasury_router {
         instructions::reserve::handler(ctx)
     }
 
+    pub fn spillway_release(ctx: Context<SpillwayRelease>) -> Result<()> {
+        instructions::spillway_release::handler(ctx)
+    }
+
     pub fn authorize_buyback_execution(ctx: Context<AuthorizeBuybackExecution>) -> Result<()> {
         instructions::buyback::handler(ctx)
     }
