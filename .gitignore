@@ -4,6 +4,7 @@
 # Anchor and Rust build output
 # Generated diagnostic inventories and snapshots
 # Integration backup files
+# Local Devnet deployment authority
 # Local Solana validator data
 # Local configuration
 # Local deployment evidence and key material
@@ -54,6 +55,8 @@
 Thumbs.db
 integrity-firewall-integration-inventory.txt
 keys/
+keys/**/*.json
+keys/devnet/deployment-authority.json
 node_modules/
 rbvr-config.txt
 rbvr-current-*.txt
