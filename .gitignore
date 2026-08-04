@@ -1,71 +1,67 @@
-# Node dependencies
-node_modules/
 
+!.env.example
+# Additional RBVR backup folders
 # Anchor and Rust build output
-target/
-test-ledger/
-.anchor/test-ledger/
-
-# Logs
-*.log
-
+# Generated diagnostic inventories and snapshots
+# Integration backup files
+# Local Solana validator data
+# Local configuration
+# Local deployment evidence and key material
 # Local environment and secrets
+# Local recovery backups
+# Locally generated security baseline snapshots
+# Logs
+# Node dependencies
+# Operating system and editor files
+# Private/local key material
+# RBVR local execution artifacts
+# RBVR local security work files
+# Solana deployment buffers
+# Temporary and backup files
+# Windows metadata
+**/id.json
+**/local-deployment.json
+*-upgrade-buffer.json
+*.bak
+*.bak-*
+*.before-*
+*.before-integration-tests
+*.corrupted-*
+*.key
+*.log
+*.pem
+*:Zone.Identifier
+*~
+.*-backup-*/
+.DS_Store
+.adaptive-dam-backup-*/
+.adaptive-dam-test-fix-*/
+.anchor/test-ledger/
+.backups/
 .env
 .env.*
-!.env.example
-
-# Temporary and backup files
-*.before-*
-*.bak
-*~
-
-# Solana deployment buffers
-*-upgrade-buffer.json
-
-# Operating system and editor files
-.DS_Store
-Thumbs.db
-.vscode/
 .idea/
-
-# Local Solana validator data
 .localnet/
-
-# Private/local key material
+.rbvr-devnet-audit/
+.rbvr-devnet-deployment/
+.rbvr-devnet-preflight/
+.rbvr-fuzz-runs/
+.rbvr-security-audit/
+.rbvr-security-hardening-backup-*/
+.reserve-engine-recovery-*/
+.sentinel-v*-backup-*/
+.vscode/
+Thumbs.db
+integrity-firewall-integration-inventory.txt
 keys/
-
-# Integration backup files
-*.before-integration-tests
-
-# Local recovery backups
-*.bak-*
-*.corrupted-*
-
-# RBVR local security work files
-.*-backup-*/
-.adaptive-dam-test-fix-*/
-.backups/
-rbvr-security-fix-backup-*/
-test-ledger/
-
-# Windows metadata
-*:Zone.Identifier
-
-# Generated diagnostic inventories and snapshots
+node_modules/
+rbvr-config.txt
 rbvr-current-*.txt
 rbvr-phase2-source-*.txt
 rbvr-process-fees-code.txt
+rbvr-security-fix-backup-*/
 rbvr-security-inventory.txt
 rbvr-waterfall-dam-current.txt
-integrity-firewall-integration-inventory.txt
-
-# Additional RBVR backup folders
-.sentinel-v*-backup-*/
-.rbvr-security-hardening-backup-*/
-.adaptive-dam-backup-*/
-
-# Local configuration
-rbvr-config.txt
-
-# Locally generated security baseline snapshots
 security-baselines/
+target/
+test-ledger/
