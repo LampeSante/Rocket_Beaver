@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::TokenAccount;
+use anchor_spl::token::{Mint, TokenAccount};
 
 use crate::{
     constants::{
@@ -10,11 +10,21 @@ use crate::{
         beaver_score, buyback, company, dam, founder, liquidity, reserve, sentinel, waterfall,
     },
     errors::TreasuryRouterError,
-    state::{CompanyState, FounderState, ProtocolConfig, ProtocolState, TreasuryState},
+    state::{
+        CompanyState, FounderPriceState, FounderState, FounderUsdCapState, ProtocolConfig,
+        ProtocolState, TreasuryState, FOUNDER_PRICE_SEED, FOUNDER_USD_CAP_SEED,
+    },
 };
 
 #[derive(Accounts)]
 pub struct ProcessFees<'info> {
+    #[account(
+        constraint = settlement_mint.key()
+            == treasury.settlement_mint
+            @ TreasuryRouterError::InvalidSettlementMint
+    )]
+    pub settlement_mint: Account<'info, Mint>,
+
     #[account(
         mut,
         seeds = [PROTOCOL_SEED],
@@ -57,6 +67,44 @@ pub struct ProcessFees<'info> {
         constraint = founder_state.protocol == protocol_state.key()
     )]
     pub founder_state: Box<Account<'info, FounderState>>,
+
+    /// Migration-compatible Founder recipient and linkage account.
+    ///
+    /// The token-denominated period cap in this account is no longer the
+    /// authoritative production cap. FounderUsdCapState is authoritative.
+    #[account(
+        mut,
+        seeds = [
+            FOUNDER_USD_CAP_SEED,
+            protocol_state.key().as_ref(),
+        ],
+        bump = founder_usd_cap.bump,
+        constraint = founder_usd_cap.protocol
+            == protocol_state.key()
+            @ TreasuryRouterError::InvalidFounderUsdCapProtocol,
+        constraint = founder_usd_cap.settlement_mint
+            == treasury.settlement_mint
+            @ TreasuryRouterError::InvalidFounderUsdCapSettlementMint
+    )]
+    pub founder_usd_cap: Box<Account<'info, FounderUsdCapState>>,
+
+    #[account(
+        seeds = [
+            FOUNDER_PRICE_SEED,
+            protocol_state.key().as_ref(),
+        ],
+        bump = founder_price.bump,
+        constraint = founder_price.protocol
+            == protocol_state.key()
+            @ TreasuryRouterError::InvalidFounderPriceProtocol,
+        constraint = founder_price.settlement_mint
+            == treasury.settlement_mint
+            @ TreasuryRouterError::InvalidFounderPriceSettlementMint,
+        constraint = founder_price.price_feed_id
+            == founder_usd_cap.price_feed_id
+            @ TreasuryRouterError::InvalidFounderUsdPriceFeed
+    )]
+    pub founder_price: Box<Account<'info, FounderPriceState>>,
 
     #[account(
         mut,
@@ -164,10 +212,12 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
         dam_evaluation,
         previous_beaver_score,
         beaver_score_evaluation,
-    } = process_fee_cycle(
+    } = process_fee_cycle_usd_cap(
         &mut ctx.accounts.protocol_state,
         &mut ctx.accounts.treasury,
-        &mut ctx.accounts.founder_state,
+        &mut ctx.accounts.founder_usd_cap,
+        &ctx.accounts.founder_price,
+        ctx.accounts.settlement_mint.decimals,
         &mut ctx.accounts.company_state,
         amount,
         clock.unix_timestamp,
@@ -268,13 +318,29 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
     msg!("Founder actual allocation: {}", founder_amount);
 
     msg!(
-        "Founder earned during current period: {}",
-        ctx.accounts.founder_state.earned_current_period
+        "Founder USD earned during current annual period: {}",
+        ctx.accounts.founder_usd_cap.earned_current_period_usd_e6
     );
 
     msg!(
-        "Founder period cap: {}",
-        ctx.accounts.founder_state.period_cap
+        "Founder annual USD cap: {}",
+        ctx.accounts.founder_usd_cap.annual_cap_usd_e6
+    );
+
+    msg!(
+        "Founder annual period duration: {} seconds",
+        ctx.accounts.founder_usd_cap.period_duration
+    );
+
+    msg!(
+        "Founder oracle price/exponent: {}/{}",
+        ctx.accounts.founder_price.price,
+        ctx.accounts.founder_price.exponent
+    );
+
+    msg!(
+        "Founder oracle publication time: {}",
+        ctx.accounts.founder_price.publish_time
     );
 
     msg!("Waterfall previous stage: {}", previous_waterfall_stage);
@@ -390,6 +456,181 @@ pub struct FeeCycleOutcome {
 /// Liquidity Growth. Rounding remainder is assigned to Reserve. Any error
 /// aborts the surrounding Solana transaction atomically when called through
 /// the instruction handler.
+pub fn process_fee_cycle_usd_cap(
+    protocol_state: &mut ProtocolState,
+    treasury: &mut TreasuryState,
+    founder_usd_cap: &mut FounderUsdCapState,
+    founder_price: &FounderPriceState,
+    settlement_token_decimals: u8,
+    company_state: &mut CompanyState,
+    amount: u64,
+    now: i64,
+) -> Result<FeeCycleOutcome> {
+    require!(amount > 0, TreasuryRouterError::NoUnprocessedFees);
+
+    // Evaluate health before applying this cycle so the transaction cannot
+    // improve the stage used to allocate itself.
+    let pre_allocation_waterfall = waterfall::evaluate(treasury)?;
+
+    let adaptive_allocation = waterfall::allocation_for_stage(pre_allocation_waterfall.stage);
+
+    require!(
+        adaptive_allocation.total_bps() == u32::from(BPS_DENOMINATOR),
+        TreasuryRouterError::InvalidAllocationConfiguration
+    );
+
+    let base_reserve_amount = calculate_share(amount, adaptive_allocation.reserve_bps)?;
+
+    let buyback_amount = calculate_share(amount, adaptive_allocation.buyback_burn_bps)?;
+
+    let liquidity_amount = calculate_share(amount, adaptive_allocation.liquidity_bps)?;
+
+    let requested_company_amount = calculate_share(amount, adaptive_allocation.company_bps)?;
+
+    let requested_founder_amount = calculate_share(amount, adaptive_allocation.founder_bps)?;
+
+    let allocated_before_remainder = base_reserve_amount
+        .checked_add(buyback_amount)
+        .and_then(|value| value.checked_add(liquidity_amount))
+        .and_then(|value| value.checked_add(requested_company_amount))
+        .and_then(|value| value.checked_add(requested_founder_amount))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let rounding_remainder = amount
+        .checked_sub(allocated_before_remainder)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let normal_reserve_amount = base_reserve_amount
+        .checked_add(rounding_remainder)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    founder_price.validate_price(now)?;
+    founder_usd_cap.validate_configuration()?;
+
+    let founder_allocation = crate::engines::founder_usd_cap::apply_founder_usd_cap(
+        founder_usd_cap,
+        requested_founder_amount,
+        settlement_token_decimals,
+        founder_price.price,
+        founder_price.exponent,
+        now,
+    )?;
+
+    let company_allocation = company::allocate(company_state, requested_company_amount, now)?;
+
+    let founder_amount = founder_allocation.founder_token_amount;
+    let company_amount = company_allocation.company_amount;
+
+    // Locked Bevernomics rule: all Company and Founder cap overflow is
+    // redirected to Liquidity Growth.
+    let final_liquidity_amount = liquidity_amount
+        .checked_add(founder_allocation.liquidity_overflow_token_amount)
+        .and_then(|value| value.checked_add(company_allocation.liquidity_overflow_amount))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let final_allocated_amount = normal_reserve_amount
+        .checked_add(buyback_amount)
+        .and_then(|value| value.checked_add(final_liquidity_amount))
+        .and_then(|value| value.checked_add(company_amount))
+        .and_then(|value| value.checked_add(founder_amount))
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    require!(
+        final_allocated_amount == amount,
+        TreasuryRouterError::InvalidAllocationConfiguration
+    );
+
+    treasury.total_fees_received = treasury
+        .total_fees_received
+        .checked_add(amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.total_fees_allocated = treasury
+        .total_fees_allocated
+        .checked_add(amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let reserve_deposit = reserve::deposit_fee_allocation(treasury, normal_reserve_amount)?;
+
+    let liquidity_deposit = liquidity::deposit(treasury, final_liquidity_amount)?;
+
+    let buyback_deposit = buyback::deposit(treasury, buyback_amount)?;
+
+    treasury.pending_company = treasury
+        .pending_company
+        .checked_add(company_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.pending_founder = treasury
+        .pending_founder
+        .checked_add(founder_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.lifetime_company = treasury
+        .lifetime_company
+        .checked_add(company_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.lifetime_founder = treasury
+        .lifetime_founder
+        .checked_add(founder_amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.processing_epoch = treasury
+        .processing_epoch
+        .checked_add(1)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    treasury.last_processed_at = now;
+
+    let previous_waterfall_stage = treasury.waterfall_stage;
+    let waterfall_evaluation = waterfall::evaluate(treasury)?;
+
+    treasury.waterfall_stage = waterfall_evaluation.stage.as_u8();
+
+    let previous_dam_level = protocol_state.dam_level;
+
+    let pre_dam_health_score = beaver_score::pre_dam_health_score(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+    )?;
+
+    let dam_evaluation = dam::evaluate_adaptive(waterfall_evaluation.stage, pre_dam_health_score);
+
+    protocol_state.dam_level = dam_evaluation.level.as_u8();
+
+    let previous_beaver_score = protocol_state.beaver_score;
+
+    let beaver_score_evaluation = beaver_score::evaluate(
+        treasury,
+        waterfall_evaluation.reserve_ratio_bps,
+        waterfall_evaluation.stage,
+        dam_evaluation.level,
+    )?;
+
+    protocol_state.beaver_score = beaver_score_evaluation.total_score;
+
+    Ok(FeeCycleOutcome {
+        pre_allocation_waterfall,
+        adaptive_allocation,
+        requested_company_amount,
+        requested_founder_amount,
+        company_amount,
+        founder_amount,
+        reserve_deposit,
+        liquidity_deposit,
+        buyback_deposit,
+        previous_waterfall_stage,
+        waterfall_evaluation,
+        previous_dam_level,
+        pre_dam_health_score,
+        dam_evaluation,
+        previous_beaver_score,
+        beaver_score_evaluation,
+    })
+}
+
 pub fn process_fee_cycle(
     protocol_state: &mut ProtocolState,
     treasury: &mut TreasuryState,
