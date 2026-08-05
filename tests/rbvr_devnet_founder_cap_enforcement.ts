@@ -149,7 +149,7 @@ describe("RBVR Devnet Founder USD Cap Enforcement", function () {
 
 
 
-        companyState,
+
 
         settlementVault,
       })
