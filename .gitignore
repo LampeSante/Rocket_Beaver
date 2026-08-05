@@ -68,3 +68,6 @@ rbvr-waterfall-dam-current.txt
 security-baselines/
 target/
 test-ledger/
+
+# Local security scan reports
+.local-reports/

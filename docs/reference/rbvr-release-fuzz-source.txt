@@ -1,0 +1,2137 @@
+===== FUZZ DIRECTORY =====
+fuzz/.gitignore
+fuzz/Cargo.lock
+fuzz/Cargo.toml
+fuzz/artifacts/treasury_accounting/crash-bbbf92a6e0e92bdf16f2111863743ba99b560cf3
+fuzz/corpus/adaptive_dam/46322ba9f16856527991222bb64b3591e063d867
+fuzz/corpus/adaptive_dam/6d4bf42a1a0b11c2a810c82b9fdd083487362685
+fuzz/corpus/adaptive_dam/7d97bfe0118b31a33a0eef85109f05fdf47edfdb
+fuzz/corpus/adaptive_dam/9148599746d2955159cce6404e2e3ca978994582
+fuzz/corpus/adaptive_dam/abe5454994fe0dce66515e6debee7ea7d6c641d8
+fuzz/corpus/adaptive_dam/acc97e9021b0961de51d98ed9a8b2ce44caeca8f
+fuzz/corpus/adaptive_dam/b128c64f7e3440748397d101d078caef3ea77435
+fuzz/corpus/adaptive_dam/c42ac1c46f1d4e211c735cc7dfad4ff8391110e9
+fuzz/corpus/adaptive_dam/c8c2185f4632763b860a54f9a496732e50bb62af
+fuzz/corpus/adaptive_dam/cebcb27ad464211e7aef44ff5b32d642530d4840
+fuzz/corpus/adaptive_dam/ced2a99bd376639db6e7693e3ec5100f87b48b46
+fuzz/corpus/adaptive_dam/e41a767461277ea7a5e5c90351f554ee9068a487
+fuzz/corpus/adaptive_dam/f8458512db616ca7737c35b68018ca55706658ef
+fuzz/corpus/execution_release_limit/2dfeb8f5198afca55dd3ce7e434ffb8fda431b6e
+fuzz/corpus/execution_release_limit/34462400f163e5d79617f608977f61c5d74368f4
+fuzz/corpus/execution_release_limit/890f96a54ee1a9afe61a714541351bb2e10915ff
+fuzz/corpus/execution_release_limit/89c7e0a8f6a87b032ee7e206aed11ad62f4d4d9a
+fuzz/corpus/execution_release_limit/adfbaecf0ef219ae4787bc2be3a1ee4f2d1b4914
+fuzz/corpus/process_fees/00dc5bc4afb83e4294713d53589c14dd31740ff6
+fuzz/corpus/process_fees/019137abe64e2d0263affb79b5ed304b6c4b22d5
+fuzz/corpus/process_fees/038f97fcb1ffa3fe570779ce25e0cc6f59227bc5
+fuzz/corpus/process_fees/0415a8acf2237dca21382d894c8b7457734bdaa9
+fuzz/corpus/process_fees/04c72aa1876bb7ea8b1e2f651d2d892bb74cd70f
+fuzz/corpus/process_fees/069c3806bfdbe5896367ce01a2e6fa8770f69458
+fuzz/corpus/process_fees/06e7012ccae4ed726636ec2f79641f0c4a7f3ca5
+fuzz/corpus/process_fees/077c0ba020a3c4e7797e41de84ba97cdfda036cd
+fuzz/corpus/process_fees/07ce36c6743c8a45d3b29358fca7f82dd7c0ea2c
+fuzz/corpus/process_fees/07f5a2b038d6c9ad32c87cd439ec1793b53f7ab1
+fuzz/corpus/process_fees/0874f2ad717c14452ffa3ea83188d2c70c18e1d2
+fuzz/corpus/process_fees/0c2d3b0b74c6dea08ac0fbf1d3eec5771676516f
+fuzz/corpus/process_fees/0cfec2e552040ff8e380e6091d079491f379d650
+fuzz/corpus/process_fees/121805e94c26baa0bfb55d73c1e5fa828e1580eb
+fuzz/corpus/process_fees/124e491557c1d4b38539d77b51677961f99a263e
+fuzz/corpus/process_fees/14b1e8cd44cce06252780263d53f151e11261e0d
+fuzz/corpus/process_fees/156958cec4dd2433832f242f64145ea76de6de88
+fuzz/corpus/process_fees/1656065b76e509bc134f029abfe4dda045d60f43
+fuzz/corpus/process_fees/1774107114ddd52b2f5512561060e1968ab33dcf
+fuzz/corpus/process_fees/19b331e2907af67f6d653abbbb224ef70828e2b7
+fuzz/corpus/process_fees/21cc8de1d8051de3ed4b49cdf74811960b7a8b2d
+fuzz/corpus/process_fees/2690c6b5bed140a72a42e80ee0f29b28c681c6e3
+fuzz/corpus/process_fees/27acf0f750d7327742a1d050ae559521c3a0e2d0
+fuzz/corpus/process_fees/292dc3704f95bcfea54abff04f81ac47ba0b930d
+fuzz/corpus/process_fees/2ace62c1befa19e3ea37dd52be9f6d508c5163e6
+fuzz/corpus/process_fees/2c0ca0917357b87ed2c1c33534dd9826d92b4456
+fuzz/corpus/process_fees/2c45986cf44e3abc866b8eb21203c3945abe4f8e
+fuzz/corpus/process_fees/2c7c752328d4cdba67f4f67c731ca0fcef3913cd
+fuzz/corpus/process_fees/2d46e7ee031b0653bae1a2de6d0725f61de763e6
+fuzz/corpus/process_fees/2fa0dc1f158efc488c97f8f1c144a03e50ce2d01
+fuzz/corpus/process_fees/2fe920cc61aa854996e98c385e9bc3f6744497ae
+fuzz/corpus/process_fees/307f760db70e028b8757206b7d5b11d545b72f40
+fuzz/corpus/process_fees/3312c211c79b56c8d17b8d17a48f0803cf838f96
+fuzz/corpus/process_fees/342c653777a436a62a79af0bb749ce147d69c77a
+fuzz/corpus/process_fees/349e94884387fabae488e3d62f5def61482dc4af
+fuzz/corpus/process_fees/3583e4cd93de105129e7a01cbb34b752905ea642
+fuzz/corpus/process_fees/366064131c873e8b82ad1b8c2c88d916f7014090
+fuzz/corpus/process_fees/3730a65646b9eaab03ac6a2a515ef2b6afe10da4
+fuzz/corpus/process_fees/3971eca482326b5627dd1147b68e7492577f8399
+fuzz/corpus/process_fees/3ad23ec86517f3243b405f5589f487adf08ca82b
+fuzz/corpus/process_fees/3bd52f2a99cb153e7cc9049ba1902cf02ecb5501
+fuzz/corpus/process_fees/3e2c3e6019636d4cea86295f0117c2869c914324
+fuzz/corpus/process_fees/3ea4175aafe4cc3324e2dafa585f30d4643db360
+fuzz/corpus/process_fees/412c0011a92e72deedecca33bbd40d58313f5ccf
+fuzz/corpus/process_fees/41af25349488e478cf1a778d8ebfebd7493dfec1
+fuzz/corpus/process_fees/4221ce46311ccfc893773687b66d56a266140101
+fuzz/corpus/process_fees/431dc3fd68d60e9153a45b23d3609752745956f8
+fuzz/corpus/process_fees/43a37203ced9d3a05224f5a52dad2250e0032b70
+fuzz/corpus/process_fees/468bcbbc3896c2308192b42d15e9eecbe7822c99
+fuzz/corpus/process_fees/47735ca469316e58ea45689a33603a77a9a5ab07
+fuzz/corpus/process_fees/49f5f61c6b4c0f577fa6d86d3c827a5f1d3ef444
+fuzz/corpus/process_fees/4a5bc23ccc792f867d4258b7ea8eb887dada3090
+fuzz/corpus/process_fees/4b48803661d71d9192122b9f300401dcc11c6280
+fuzz/corpus/process_fees/4c8ff8174e9504b6250701b2999b9f9f67e4525d
+fuzz/corpus/process_fees/4d472f3e0c67d33a05ea3c509be94a7fdff2c57d
+fuzz/corpus/process_fees/4e42b42ca8692c455fb2dc5c7a429b0cc74e39e5
+fuzz/corpus/process_fees/4e5d5b94701f57d84f1eea4ddaf6c52b87af5462
+fuzz/corpus/process_fees/4e67420c3d54248cc87781b5a74383f99b517cc3
+fuzz/corpus/process_fees/4e9cf599a339afba7e9ca3504a335ac878c63dc8
+fuzz/corpus/process_fees/505499ed07e2ff287735073f1168d2ad3055ce2a
+fuzz/corpus/process_fees/51779875de7c9adc1ff324bd8658845fb3f7f9c8
+fuzz/corpus/process_fees/54c9297d189457ed66e5f984549aadf0e3bb9a80
+fuzz/corpus/process_fees/552fc247fb4e352e18ac144c1b819c04c274a2fc
+fuzz/corpus/process_fees/567da885c5f5dca8a9a53e386c685f28e069b172
+fuzz/corpus/process_fees/56ca8c2a1f326bd414bee4705e6e921c58148322
+fuzz/corpus/process_fees/5726f522288fbd46296d6855997986f97a81d226
+fuzz/corpus/process_fees/5844d2ba9eba758767db871599e69615dcd968d6
+fuzz/corpus/process_fees/5928843606e5492c3f3cf4b32be9b7ae81227f6d
+fuzz/corpus/process_fees/59c6c67503d4e3d0aae7c3efd13955306b6b3d32
+fuzz/corpus/process_fees/59fade9087b02a34c1b6cb28143be9fe69158534
+fuzz/corpus/process_fees/5b9eb1f163666ce9e953a793a0245e93856890fb
+fuzz/corpus/process_fees/5d7ca2474448f221bdd97704baa10ed588369966
+fuzz/corpus/process_fees/5da544ef3bb43a68b6f274fe9bafb166e00c6a32
+fuzz/corpus/process_fees/5e6d1f5b2a271746e81814c87698547ca4e556a5
+fuzz/corpus/process_fees/6010a5ad6db0e3bb69d9872640b1b7e625b2edcd
+fuzz/corpus/process_fees/61c070fd3022d048c650d6e95a4d7930b4e3a10d
+fuzz/corpus/process_fees/634f1012e76c8e83161402614789603bbd741588
+fuzz/corpus/process_fees/63a18527cf25b3bf36f5754713e0aa62a7016274
+fuzz/corpus/process_fees/63e17f115d41453380d42ac45a3ff9a5503f9fbe
+fuzz/corpus/process_fees/668f5bbb73c74e8f6385ca56e621be6cfea8ccbc
+fuzz/corpus/process_fees/679269403f50b274d27c31de52bc93b118c13b62
+fuzz/corpus/process_fees/69a78452a4603488551f3a6891c0cdf016484611
+fuzz/corpus/process_fees/6aab724d66e80ecb9b7ff47ccfb6eb3204d5e576
+fuzz/corpus/process_fees/6c03a703edcfb141776489caa9c375b1fba4329d
+fuzz/corpus/process_fees/6d6f8a2d4775865b1490a910bad3e7e2e077d45d
+fuzz/corpus/process_fees/6e6ed57a0765059eb6ca9082aa795a6dcee318bb
+fuzz/corpus/process_fees/6ed0f0a72dd9d0f49e99621d4487a04636f53fda
+fuzz/corpus/process_fees/6f0ba958e75715cdf7be21ac28c939eba532d53f
+fuzz/corpus/process_fees/6f8113d902db855b00ce519ad5dfaa7d50353a40
+fuzz/corpus/process_fees/712f542999d2a0a22b5106be6bc967a25b55e8b6
+fuzz/corpus/process_fees/717b007c81f2681fda2d7d0ae5ce0d2f9291126f
+fuzz/corpus/process_fees/72932fcbeb1b749a3c0148b2578c5d133553ca77
+fuzz/corpus/process_fees/739f8215f4fdc7aaa0c289eb065deaa12b0c1735
+fuzz/corpus/process_fees/7493a1c5cc17fae3406d4ddafb5269904aad969d
+fuzz/corpus/process_fees/765f1ae0c67a98dca13288dc8a690aa97e60c019
+fuzz/corpus/process_fees/77b098661e342ed1db6d8b95ab220468d8d37067
+fuzz/corpus/process_fees/78e17f43b42c04565882f329413850228654c31a
+fuzz/corpus/process_fees/79c3eb6a1a87ac4c9c4d6d34d30ba859f5d05d23
+fuzz/corpus/process_fees/7aae5f660bbfcc16d5983789c956bc60a60eabf1
+fuzz/corpus/process_fees/7bdfb1d7d1c9d481ba0884d7c3388ee2135145d3
+fuzz/corpus/process_fees/7ca1276734e824c4f19a1ed1a57db4ac57d03b6b
+fuzz/corpus/process_fees/7e080b43b8664e54a3b8a7a3390b03600590af72
+fuzz/corpus/process_fees/7efbc8f4c4cd8540f5749d010a583a44a0758bb5
+fuzz/corpus/process_fees/7f7a028de29ca360c7118854ac0a0660fa908463
+fuzz/corpus/process_fees/84949e0ab36575e0142cbf3ecf056ffe24fdd771
+fuzz/corpus/process_fees/869e4a54fbbd3a55fbf2aada693826f63d5530da
+fuzz/corpus/process_fees/86cd34ba9e536f4f3f4998a4a54e2f07ed328d32
+fuzz/corpus/process_fees/8cd935712109d9dee7fb0f8decb9c08379dfa6d6
+fuzz/corpus/process_fees/8d001ac4715fa08a1811c46e3a330d97b1f17191
+fuzz/corpus/process_fees/8d28f7944c8714aa0aac4573b6943a85e2be8880
+fuzz/corpus/process_fees/8db12384d868414d0c363acd7c70b36c64d44582
+fuzz/corpus/process_fees/8fe9981a40483b6b50ca86692226edaf7de6e47a
+fuzz/corpus/process_fees/929c4dc4323488834ad2b7a71a2e4ef7552d7119
+fuzz/corpus/process_fees/940c8d5b2ce29f21218774ecf6d1883198fa2b39
+fuzz/corpus/process_fees/9610c13732e1969d31469c161b060f1ec7c9b500
+fuzz/corpus/process_fees/98b881e883ac05ac56bc30e573decb5a0544d347
+fuzz/corpus/process_fees/998e5ea4088d904683626c3a64de176838bf8dc1
+fuzz/corpus/process_fees/9a353a1d6caf114c6d388afc79646c7c247b6ad6
+fuzz/corpus/process_fees/9a6cc2aeacb0366db5769f9ff5d3d1cff8264c9d
+fuzz/corpus/process_fees/9c780598dd547942ee075149ae01da2d617a2a0e
+fuzz/corpus/process_fees/9cec60d366fbe540e3119c489a2a0a84ec6e1066
+fuzz/corpus/process_fees/9d0603c98feec3f3081f052bca89aea8ea8a25ed
+fuzz/corpus/process_fees/9db289ace11b5eafce5f773e1c992ab6db549bb3
+fuzz/corpus/process_fees/9e6137f89fd2c102fc73c5ecc3c628406cb7e5ce
+fuzz/corpus/process_fees/9f119267a869303c52ff0cdfde6f36354bf3286b
+fuzz/corpus/process_fees/9f36c4b5245c3c7119d9d65724fe2b1067920244
+fuzz/corpus/process_fees/a0a5ea488ca4d8652315f74501d7edcc6dc211b6
+fuzz/corpus/process_fees/a24661c29ef59c63e7857d979059f14ff3d82b54
+fuzz/corpus/process_fees/a41abe178c146bf568501946745e3619f21aa490
+fuzz/corpus/process_fees/a79c3263b496137480b78b6a9333d2bfd6b84d76
+fuzz/corpus/process_fees/aa4c7b5e434ce22186032e8da7853df3e6a2325e
+fuzz/corpus/process_fees/ab1e53f2eb7986da6c3bb1c32dc48f924e6183bf
+fuzz/corpus/process_fees/ab614a4d65256f2d2a2bbfd6ad8000053c8f56f8
+fuzz/corpus/process_fees/b0598c0aa4c04d6d540659a5f7e627cee8958101
+fuzz/corpus/process_fees/b11bd0e251fcd9368176b58c895ef4e5e3d3e750
+fuzz/corpus/process_fees/b39e5dac5c65da083997520882cc90c11c55935d
+fuzz/corpus/process_fees/b54d26ab711aa9eb2d80d3b4a64ec68e7514d70c
+fuzz/corpus/process_fees/b7b172348129ce98730854becc2f03d64ea1dd91
+fuzz/corpus/process_fees/b86b2d2bd944131152817c9636dadaebabce4657
+fuzz/corpus/process_fees/bd658ddd421d6ff129777efe61d6bc31950a7de0
+fuzz/corpus/process_fees/bdab0a1bf84807d553ef0f5f7fdd8d14bee9d0fe
+fuzz/corpus/process_fees/c058b0486271f80c417b49079c4d26c99e90241c
+fuzz/corpus/process_fees/c1e84952ec5823df8db3e0c5096fc38a50f90c9f
+fuzz/corpus/process_fees/c466a370c7c1bbb7dede41d12f076abee2ac5272
+fuzz/corpus/process_fees/c4eff4aee45ffa38cf57a4260a92aa85b5a3b6ad
+fuzz/corpus/process_fees/c56831a866eff3465f448ca8bf9e662ce5466777
+fuzz/corpus/process_fees/c5facc82637816373486efc660ed702660c8be61
+fuzz/corpus/process_fees/c6ce8ccc0c68352da383216464a07fcf0eafa710
+fuzz/corpus/process_fees/caa21c5c86a2ee5b2583239e139d54e900a6b6ec
+fuzz/corpus/process_fees/ced2d76899051204365d168244c0528cbfd1a27f
+fuzz/corpus/process_fees/cf74cd7e124b93dbd3c57dfeaa4d1e4b4cb54a62
+fuzz/corpus/process_fees/d1c9d2b7264f57540c8cd7302cc3722a324508ca
+fuzz/corpus/process_fees/d1dfc81f5be147c48ad01930a28c83caf463f623
+fuzz/corpus/process_fees/d2089e8e84ee615004d6d084234635d745f111ee
+fuzz/corpus/process_fees/d4d41e6e6596cb04e125fbfc0b2d691fa177ae86
+fuzz/corpus/process_fees/d50784a5ade833e99bee35b12af72e7594292096
+fuzz/corpus/process_fees/d5c56df1fd9d62d28f11461ba3ad4d01e1c09f8e
+fuzz/corpus/process_fees/d6388c8bb81dfd4f0ec8250fa6b417b618b1d346
+fuzz/corpus/process_fees/d8ffcfb085a46d7892e5ab687e72dedf768bc5f6
+fuzz/corpus/process_fees/d916bf85c13e05d034c83e06415d46faac368fbf
+fuzz/corpus/process_fees/d96f9038dddc5a9ba1fcbc48857f4aa4e3c04ef3
+fuzz/corpus/process_fees/da14b1f5bcd7861a73d9be9ead2c22d9d62d8413
+fuzz/corpus/process_fees/daf2930d23135924676d215f25aa0022caf5201e
+fuzz/corpus/process_fees/db91683026c92820c229d3c1565e14d24f1cf64f
+fuzz/corpus/process_fees/dca55d42a1a4d18dc74df2c90958a013c7d35548
+fuzz/corpus/process_fees/dcbed1ce64b4c213a629f35629d28341c98f2f27
+fuzz/corpus/process_fees/dd19474203fb56a69be4824f4113aca18d29a305
+fuzz/corpus/process_fees/dd19bac216216fab6239bf70881a864991cf9d18
+fuzz/corpus/process_fees/ddd789fa180a366cdae82f11d3ec0d166ad38ac1
+fuzz/corpus/process_fees/ddebbd59b181a0f9a44b2af64dd6baa4f58e6cab
+fuzz/corpus/process_fees/ddf0f6d7ad1659ebcd46bf6baad5dfcd7ca3f82f
+fuzz/corpus/process_fees/de184219d4caeab909652c79d2403e7182900d23
+fuzz/corpus/process_fees/df1bab068ed3cb9b1da14db4de4b9db280719575
+fuzz/corpus/process_fees/e0fc4d7e88efa3021906a543bf2606e0400737f9
+fuzz/corpus/process_fees/e2e7e261ff2265b7a79684263564fdd9cbe4a613
+fuzz/corpus/process_fees/e6633d21b2624cb100d71f442983a2925bd442a8
+fuzz/corpus/process_fees/e6ce23b7f617e5ac9519159b5d1ea20545da7f06
+fuzz/corpus/process_fees/e7edc7d2a45181f3b9ee82e9c4fea9505fa6c87a
+fuzz/corpus/process_fees/e86f1faec04d077d0cc0fa58dd03adf38810833d
+fuzz/corpus/process_fees/e968fa284e9e199d15c570153e4ed645da07917e
+fuzz/corpus/process_fees/e9f47756dfb327bb16d377202b18ad33a4a7462b
+fuzz/corpus/process_fees/ea221bca5257c3c2eaa909e4454f6e125362571e
+fuzz/corpus/process_fees/ea4345d1f926274e61453c0cca14866b4cacb402
+fuzz/corpus/process_fees/ef7e6805c36382860badceae14428e462a7676c8
+fuzz/corpus/process_fees/f1cc7123f0a948c766bf308ece789f498b4629fb
+fuzz/corpus/process_fees/f24136c4b29cb53672255b2d7a0d3dc3bd64ec84
+fuzz/corpus/process_fees/f283359fc95fd63f812335cd293cfa6f44cf4511
+fuzz/corpus/process_fees/f3047ec835cd4c8984c5eac79b56872d65dd6bd5
+fuzz/corpus/process_fees/f4d7ace8828848976d349b6eadaede6a5d5d561e
+fuzz/corpus/process_fees/f4f37c0c6c10c91ca81bb1523b9311f88627e0a4
+fuzz/corpus/process_fees/f6b709167b250483f7517cd506744c01501f3461
+fuzz/corpus/process_fees/f829d5870dfcbdd00a4081aefd742b6a04434a57
+fuzz/corpus/process_fees/f93f1f0816abd5f5acdb9d87af237bfdb52bcdb4
+fuzz/corpus/process_fees/f99fa4f081137353381a1695a1ec881d11631074
+fuzz/corpus/process_fees/fb747384697565cc2a59dc81cf1a7fabe3b0acbc
+fuzz/corpus/process_fees/fc6162fdacc2022cebcdb394f7dbd02820d5b401
+fuzz/corpus/process_fees/fc67f9e897f1396a27d9cba733023bbfb0452660
+fuzz/corpus/process_fees/fcdf7447ccfb5e44f77de8682408fa80fb31c363
+fuzz/corpus/process_fees/fcfe02f25b99342baa7d063c8378dd37c890cdc2
+fuzz/corpus/treasury_accounting/0f2ae3d5608419c7c16c77d9ebd24e9db586a068
+fuzz/corpus/treasury_accounting/38bab8e350d8d30250631a9a28df4c29cdce92fe
+fuzz/corpus/treasury_accounting/5ec7e482cf789c33f10f891eaa643a18aa7f5ad5
+fuzz/corpus/treasury_accounting/5fb9a0ba37519b7fd51909c778ee3b48502de7c1
+fuzz/corpus/treasury_accounting/648c44f475bcf3ab0534a041a1f85d5f66a97576
+fuzz/corpus/treasury_accounting/7fb01f38154369ba8ffd236322a318702cb2c952
+fuzz/corpus/treasury_accounting/a86e096de314c36c010f42b6a8374a80a9c12b5f
+fuzz/corpus/treasury_accounting/b4bbceacbc16611f42db5b8a400a2b99e398440f
+fuzz/corpus/treasury_accounting/f2d92f67e20969250b21ff9eae05a516e5e4ea48
+fuzz/corpus/treasury_accounting/regression-overflow-max-lifetime
+fuzz/corpus/waterfall_engine/45ba4bd6a379357e25192aa9023e897a7710819c
+fuzz/corpus/waterfall_engine/4707d53cb9b0ee5a3c37fa92a958f1c577cfd7ca
+fuzz/corpus/waterfall_engine/91595c077c91397f58d44bae50c838c24994f544
+fuzz/corpus/waterfall_engine/a91da0c6e875576581cd37ac2f3ccbd76693b2b3
+fuzz/corpus/waterfall_engine/b80de5d138758541c5f05265ad144ab9fa86d1db
+fuzz/corpus/waterfall_engine/c5f2d10f612decf92e1331f7477dd899ca57a827
+fuzz/corpus/waterfall_engine/dc3524894b2cd3dddd3888490963bd8f936b0f4f
+fuzz/corpus/waterfall_engine/dce0a33a1ad052ef07f6ad1fbe0cc6db9e775e4d
+fuzz/corpus/waterfall_engine/dfe2d2dd8258eeec74fe36a961b00811f9f0855b
+fuzz/corpus/waterfall_engine/fe8fe54ce6930c153e2eec4c90368ce33dbf6529
+fuzz/fuzz_targets/adaptive_dam.rs
+fuzz/fuzz_targets/execution_release_limit.rs
+fuzz/fuzz_targets/process_fees.rs
+fuzz/fuzz_targets/treasury_accounting.rs
+fuzz/fuzz_targets/waterfall_engine.rs
+fuzz/target/.rustc_info.json
+fuzz/target/CACHEDIR.TAG
+fuzz/target/release/.cargo-artifact-lock
+fuzz/target/release/.cargo-build-lock
+fuzz/target/release/.cargo-lock
+fuzz/target/x86_64-unknown-linux-gnu/CACHEDIR.TAG
+
+===== FUZZ CARGO TOML =====
+[package]
+name = "treasury-router-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+anchor-lang = "1.1.2"
+
+[dependencies.treasury-router]
+path = "../programs/treasury-router"
+
+[[bin]]
+name = "execution_release_limit"
+path = "fuzz_targets/execution_release_limit.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "waterfall_engine"
+path = "fuzz_targets/waterfall_engine.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "adaptive_dam"
+path = "fuzz_targets/adaptive_dam.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "treasury_accounting"
+path = "fuzz_targets/treasury_accounting.rs"
+test = false
+doc = false
+bench = false
+
+# Keep fuzzing isolated from the production Cargo workspace.
+[workspace]
+
+[[bin]]
+name = "process_fees"
+path = "fuzz_targets/process_fees.rs"
+test = false
+doc = false
+bench = false
+
+===== EXISTING FUZZ TARGETS =====
+
+===== fuzz/fuzz_targets/adaptive_dam.rs =====
+#![no_main]
+
+use libfuzzer_sys::fuzz_target;
+use treasury_router::engines::{
+    dam::{self, DamLevel},
+    waterfall::WaterfallStage,
+};
+
+fn stage_from_byte(value: u8) -> WaterfallStage {
+    match value % 5 {
+        0 => WaterfallStage::Normal,
+        1 => WaterfallStage::Caution,
+        2 => WaterfallStage::Defensive,
+        3 => WaterfallStage::Survival,
+        _ => WaterfallStage::Emergency,
+    }
+}
+
+fn waterfall_baseline(stage: WaterfallStage) -> DamLevel {
+    match stage {
+        WaterfallStage::Normal => DamLevel::Overflow,
+        WaterfallStage::Caution => DamLevel::Normal,
+        WaterfallStage::Defensive => DamLevel::Controlled,
+        WaterfallStage::Survival => DamLevel::Restricted,
+        WaterfallStage::Emergency => DamLevel::Filling,
+    }
+}
+
+fn health_level(score: u16) -> DamLevel {
+    match score {
+        650..=u16::MAX => DamLevel::Overflow,
+        500..=649 => DamLevel::Normal,
+        350..=499 => DamLevel::Controlled,
+        200..=349 => DamLevel::Restricted,
+        _ => DamLevel::Filling,
+    }
+}
+
+fn expected_release_bps(level: DamLevel) -> u16 {
+    match level {
+        DamLevel::Filling => 0,
+        DamLevel::Restricted => 2_500,
+        DamLevel::Controlled => 5_000,
+        DamLevel::Normal => 7_500,
+        DamLevel::Overflow => 10_000,
+    }
+}
+
+fn more_restrictive(left: DamLevel, right: DamLevel) -> DamLevel {
+    if left.as_u8() <= right.as_u8() {
+        left
+    } else {
+        right
+    }
+}
+
+fuzz_target!(|data: &[u8]| {
+    if data.len() < 3 {
+        return;
+    }
+
+    let stage = stage_from_byte(data[0]);
+    let score = u16::from_le_bytes([data[1], data[2]]);
+
+    let result = dam::evaluate_adaptive(stage, score);
+
+    let baseline = waterfall_baseline(stage);
+    let score_level = health_level(score);
+    let expected_level = more_restrictive(baseline, score_level);
+
+    // Exact agreement with an independent reference model.
+    assert_eq!(
+        result.level, expected_level,
+        "Adaptive Dam disagreed with reference model: stage={stage:?}, score={score}"
+    );
+
+    assert_eq!(
+        result.waterfall_stage, stage,
+        "Adaptive Dam returned the wrong Waterfall stage"
+    );
+
+    assert_eq!(
+        result.release_bps,
+        expected_release_bps(expected_level),
+        "Adaptive Dam returned the wrong release rate"
+    );
+
+    assert_eq!(
+        result.release_bps,
+        result.level.release_bps(),
+        "Dam evaluation release rate disagreed with DamLevel"
+    );
+
+    assert!(
+        result.release_bps <= 10_000,
+        "Adaptive Dam release exceeded 100%"
+    );
+
+    // Lower numeric Dam levels are more restrictive. The health score may
+    // tighten the Waterfall baseline, but it may never weaken it.
+    assert!(
+        result.level.as_u8() <= baseline.as_u8(),
+        "Health score weakened Waterfall protection: \
+         stage={stage:?}, score={score}, baseline={baseline:?}, result={:?}",
+        result.level
+    );
+
+    assert!(
+        result.release_bps <= baseline.release_bps(),
+        "Adaptive Dam allowed a higher release rate than the Waterfall baseline"
+    );
+
+    // Determinism: identical inputs must always produce identical output.
+    let repeated = dam::evaluate_adaptive(stage, score);
+
+    assert_eq!(repeated.level, result.level);
+    assert_eq!(repeated.release_bps, result.release_bps);
+    assert_eq!(repeated.waterfall_stage, result.waterfall_stage);
+
+    // A healthier score must never make the Dam more restrictive.
+    let healthier_score = score.saturating_add(1);
+    let healthier_result = dam::evaluate_adaptive(stage, healthier_score);
+
+    assert!(
+        healthier_result.level.as_u8() >= result.level.as_u8(),
+        "Increasing health made the Dam more restrictive: \
+         stage={stage:?}, score={score}, old={:?}, new={:?}",
+        result.level,
+        healthier_result.level
+    );
+
+    assert!(
+        healthier_result.release_bps >= result.release_bps,
+        "Increasing health reduced the permitted release rate"
+    );
+
+    // Even maximum health cannot override the Waterfall baseline.
+    let maximum_health = dam::evaluate_adaptive(stage, u16::MAX);
+
+    assert_eq!(
+        maximum_health.level, baseline,
+        "Maximum health incorrectly weakened the Waterfall baseline"
+    );
+
+    // Zero health must always close the Dam.
+    let zero_health = dam::evaluate_adaptive(stage, 0);
+
+    assert_eq!(zero_health.level, DamLevel::Filling);
+    assert_eq!(zero_health.release_bps, 0);
+
+    // The legacy deterministic evaluator uses a healthy score of 750.
+    let legacy = dam::evaluate(stage);
+    let adaptive_healthy = dam::evaluate_adaptive(stage, 750);
+
+    assert_eq!(legacy.level, adaptive_healthy.level);
+    assert_eq!(legacy.release_bps, adaptive_healthy.release_bps);
+    assert_eq!(legacy.waterfall_stage, adaptive_healthy.waterfall_stage);
+});
+
+===== fuzz/fuzz_targets/execution_release_limit.rs =====
+#![no_main]
+
+use libfuzzer_sys::fuzz_target;
+use treasury_router::engines::execution_guard::calculate_maximum_release;
+
+fuzz_target!(|data: &[u8]| {
+    if data.len() < 10 {
+        return;
+    }
+
+    let pending_balance = u64::from_le_bytes([
+        data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7],
+    ]);
+
+    let release_bps = u16::from_le_bytes([data[8], data[9]]);
+
+    let result = calculate_maximum_release(pending_balance, release_bps);
+
+    if release_bps > 10_000 {
+        assert!(
+            result.is_err(),
+            "release rate above 100% was accepted: \
+             pending={pending_balance}, release_bps={release_bps}"
+        );
+        return;
+    }
+
+    let maximum_release = result.unwrap_or_else(|error| {
+        panic!(
+            "valid release calculation failed: \
+             pending={pending_balance}, release_bps={release_bps}, error={error:?}"
+        )
+    });
+
+    assert!(
+        maximum_release <= pending_balance,
+        "maximum release exceeded pending balance: \
+         pending={pending_balance}, release_bps={release_bps}, \
+         maximum={maximum_release}"
+    );
+
+    let expected = ((u128::from(pending_balance) * u128::from(release_bps)) / 10_000) as u64;
+
+    assert_eq!(
+        maximum_release, expected,
+        "production calculation disagreed with reference model: \
+         pending={pending_balance}, release_bps={release_bps}"
+    );
+
+    if release_bps == 0 {
+        assert_eq!(maximum_release, 0);
+    }
+
+    if release_bps == 10_000 {
+        assert_eq!(maximum_release, pending_balance);
+    }
+
+    if pending_balance == 0 {
+        assert_eq!(maximum_release, 0);
+    }
+});
+
+===== fuzz/fuzz_targets/process_fees.rs =====
+#![no_main]
+
+use anchor_lang::prelude::Pubkey;
+use libfuzzer_sys::fuzz_target;
+use treasury_router::{
+    engines::beaver_score,
+    instructions::process_fees::process_fee_cycle,
+    state::{CompanyState, FounderState, ProtocolState, TreasuryState},
+};
+
+struct Cursor<'a> {
+    data: &'a [u8],
+    offset: usize,
+}
+
+impl<'a> Cursor<'a> {
+    fn new(data: &'a [u8]) -> Self {
+        Self { data, offset: 0 }
+    }
+
+    fn u8(&mut self) -> u8 {
+        let value = self.data.get(self.offset).copied().unwrap_or(0);
+        self.offset = self.offset.saturating_add(1);
+        value
+    }
+
+    fn bool(&mut self) -> bool {
+        self.u8() & 1 == 1
+    }
+
+    fn u64(&mut self) -> u64 {
+        let mut bytes = [0u8; 8];
+
+        for byte in &mut bytes {
+            *byte = self.u8();
+        }
+
+        u64::from_le_bytes(bytes)
+    }
+
+    fn i64(&mut self) -> i64 {
+        self.u64() as i64
+    }
+}
+
+fn checked_sum(values: &[u64]) -> Option<u64> {
+    values
+        .iter()
+        .try_fold(0u64, |total, value| total.checked_add(*value))
+}
+
+fuzz_target!(|data: &[u8]| {
+    let mut cursor = Cursor::new(data);
+
+    let protocol_key = Pubkey::new_from_array([7u8; 32]);
+
+    let pending_reserve = cursor.u64();
+    let pending_buyback = cursor.u64();
+    let pending_liquidity = cursor.u64();
+    let pending_company = cursor.u64();
+    let pending_founder = cursor.u64();
+
+    let released_reserve = cursor.u64();
+    let released_buyback = cursor.u64();
+    let released_liquidity = cursor.u64();
+    let released_company = cursor.u64();
+    let released_founder = cursor.u64();
+
+    let lifetime_reserve = match pending_reserve.checked_add(released_reserve) {
+        Some(value) => value,
+        None => return,
+    };
+
+    let lifetime_buyback = match pending_buyback.checked_add(released_buyback) {
+        Some(value) => value,
+        None => return,
+    };
+
+    let lifetime_liquidity = match pending_liquidity.checked_add(released_liquidity) {
+        Some(value) => value,
+        None => return,
+    };
+
+    let lifetime_company = match pending_company.checked_add(released_company) {
+        Some(value) => value,
+        None => return,
+    };
+
+    let lifetime_founder = match pending_founder.checked_add(released_founder) {
+        Some(value) => value,
+        None => return,
+    };
+
+    let total_allocated = match checked_sum(&[
+        lifetime_reserve,
+        lifetime_buyback,
+        lifetime_liquidity,
+        lifetime_company,
+        lifetime_founder,
+    ]) {
+        Some(value) => value,
+        None => return,
+    };
+
+    let amount = cursor.u64();
+
+    if amount == 0 {
+        return;
+    }
+
+    let company_cap = cursor.u64();
+    let company_spent = cursor.u64().min(company_cap);
+    let company_lifetime = cursor.u64();
+
+    let founder_cap = cursor.u64();
+    let founder_earned = cursor.u64().min(founder_cap);
+    let founder_lifetime = cursor.u64();
+
+    let now = cursor.i64();
+    let company_started = cursor.i64();
+    let founder_started = cursor.i64();
+
+    // Keep duration non-negative while still exercising zero, tiny, and very
+    // large period boundaries.
+    let company_duration = (cursor.u64() >> 1) as i64;
+    let founder_duration = (cursor.u64() >> 1) as i64;
+
+    let mut protocol = ProtocolState {
+        version: 1,
+        authority: Pubkey::new_unique(),
+        protocol_config: Pubkey::new_unique(),
+        treasury_state: Pubkey::new_unique(),
+        reserve_state: Pubkey::default(),
+        liquidity_state: Pubkey::default(),
+        founder_state: Pubkey::new_unique(),
+        company_state: Pubkey::new_unique(),
+        buyback_state: Pubkey::default(),
+        beaver_score: cursor.u64() as u16,
+        dam_level: cursor.u8() % 5,
+        paused: false,
+        bump: 255,
+        initialized_at: 0,
+        reserved: [0; 64],
+    };
+
+    let mut treasury = TreasuryState {
+        version: 1,
+        protocol: protocol_key,
+        settlement_mint: Pubkey::new_unique(),
+        settlement_vault: Pubkey::new_unique(),
+
+        total_fees_received: total_allocated,
+        total_fees_allocated: total_allocated,
+
+        pending_reserve,
+        pending_buyback_burn: pending_buyback,
+        pending_liquidity,
+        pending_company,
+        pending_founder,
+
+        lifetime_reserve,
+        lifetime_buyback_burn: lifetime_buyback,
+        lifetime_liquidity,
+        lifetime_company,
+        lifetime_founder,
+
+        released_reserve,
+        released_buyback_burn: released_buyback,
+        released_liquidity,
+        released_company,
+        released_founder,
+
+        last_processed_at: cursor.i64(),
+        processing_epoch: cursor.u64(),
+        waterfall_stage: cursor.u8() % 5,
+        buybacks_paused: cursor.bool(),
+        bump: 254,
+        reserved: [0; 24],
+    };
+
+    let mut company = CompanyState {
+        version: 1,
+        protocol: protocol_key,
+        recipient: Pubkey::new_unique(),
+        period_cap: company_cap,
+        spent_current_period: company_spent,
+        lifetime_spent: company_lifetime,
+        period_started_at: company_started,
+        period_duration: company_duration,
+        enabled: cursor.bool(),
+        bump: 253,
+        reserved: [0; 64],
+    };
+
+    let mut founder = FounderState {
+        version: 1,
+        protocol: protocol_key,
+        recipient: Pubkey::new_unique(),
+        period_cap: founder_cap,
+        earned_current_period: founder_earned,
+        lifetime_earned: founder_lifetime,
+        period_started_at: founder_started,
+        period_duration: founder_duration,
+        current_tier: cursor.u8(),
+        enabled: cursor.bool(),
+        bump: 252,
+        reserved: [0; 64],
+    };
+
+    assert!(treasury.execution_accounting_is_valid());
+
+    let old_total_received = treasury.total_fees_received;
+    let old_total_allocated = treasury.total_fees_allocated;
+    let old_epoch = treasury.processing_epoch;
+
+    let old_lifetime_reserve = treasury.lifetime_reserve;
+    let old_lifetime_buyback = treasury.lifetime_buyback_burn;
+    let old_lifetime_liquidity = treasury.lifetime_liquidity;
+    let old_lifetime_company = treasury.lifetime_company;
+    let old_lifetime_founder = treasury.lifetime_founder;
+
+    let result = process_fee_cycle(
+        &mut protocol,
+        &mut treasury,
+        &mut founder,
+        &mut company,
+        amount,
+        now,
+    );
+
+    let outcome = match result {
+        Ok(value) => value,
+
+        // Checked arithmetic and invalid boundary combinations are expected
+        // to fail closed. Solana rolls instruction mutations back atomically.
+        Err(_) => return,
+    };
+
+    assert_eq!(
+        treasury.total_fees_received,
+        old_total_received.checked_add(amount).unwrap()
+    );
+
+    assert_eq!(
+        treasury.total_fees_allocated,
+        old_total_allocated.checked_add(amount).unwrap()
+    );
+
+    assert_eq!(treasury.processing_epoch, old_epoch.checked_add(1).unwrap());
+
+    assert_eq!(treasury.last_processed_at, now);
+    assert!(treasury.execution_accounting_is_valid());
+
+    let reserve_delta = treasury
+        .lifetime_reserve
+        .checked_sub(old_lifetime_reserve)
+        .unwrap();
+
+    let buyback_delta = treasury
+        .lifetime_buyback_burn
+        .checked_sub(old_lifetime_buyback)
+        .unwrap();
+
+    let liquidity_delta = treasury
+        .lifetime_liquidity
+        .checked_sub(old_lifetime_liquidity)
+        .unwrap();
+
+    let company_delta = treasury
+        .lifetime_company
+        .checked_sub(old_lifetime_company)
+        .unwrap();
+
+    let founder_delta = treasury
+        .lifetime_founder
+        .checked_sub(old_lifetime_founder)
+        .unwrap();
+
+    let conserved = checked_sum(&[
+        reserve_delta,
+        buyback_delta,
+        liquidity_delta,
+        company_delta,
+        founder_delta,
+    ])
+    .unwrap();
+
+    assert_eq!(conserved, amount);
+
+    assert_eq!(reserve_delta, outcome.reserve_deposit.total_amount);
+    assert_eq!(buyback_delta, outcome.buyback_deposit.amount);
+    assert_eq!(liquidity_delta, outcome.liquidity_deposit.amount);
+    assert_eq!(company_delta, outcome.company_amount);
+    assert_eq!(founder_delta, outcome.founder_amount);
+
+    assert_eq!(outcome.adaptive_allocation.total_bps(), 10_000);
+
+    assert_eq!(
+        outcome
+            .company_amount
+            .checked_add(
+                outcome
+                    .requested_company_amount
+                    .checked_sub(outcome.company_amount)
+                    .unwrap()
+            )
+            .unwrap(),
+        outcome.requested_company_amount
+    );
+
+    assert_eq!(
+        outcome
+            .founder_amount
+            .checked_add(
+                outcome
+                    .requested_founder_amount
+                    .checked_sub(outcome.founder_amount)
+                    .unwrap()
+            )
+            .unwrap(),
+        outcome.requested_founder_amount
+    );
+
+    assert!(company.spent_current_period <= company.period_cap);
+    assert!(founder.earned_current_period <= founder.period_cap);
+
+    assert!(treasury.waterfall_stage <= 4);
+    assert!(protocol.dam_level <= 4);
+    assert!(protocol.beaver_score <= beaver_score::MAX_BEAVER_SCORE);
+
+    assert_eq!(
+        protocol.beaver_score,
+        outcome.beaver_score_evaluation.total_score
+    );
+
+    assert_eq!(protocol.dam_level, outcome.dam_evaluation.level.as_u8());
+
+    assert_eq!(
+        treasury.waterfall_stage,
+        outcome.waterfall_evaluation.stage.as_u8()
+    );
+});
+
+===== fuzz/fuzz_targets/treasury_accounting.rs =====
+#![no_main]
+
+use anchor_lang::prelude::Pubkey;
+use libfuzzer_sys::fuzz_target;
+use treasury_router::state::TreasuryState;
+
+const INPUT_LENGTH: usize = 120;
+
+fn read_u64(data: &[u8], offset: usize) -> u64 {
+    u64::from_le_bytes(
+        data[offset..offset + 8]
+            .try_into()
+            .expect("validated eight-byte range"),
+    )
+}
+
+fn reference_bucket_is_valid(pending: u64, released: u64, lifetime: u64) -> bool {
+    pending.checked_add(released) == Some(lifetime)
+}
+
+fuzz_target!(|data: &[u8]| {
+    if data.len() < INPUT_LENGTH {
+        return;
+    }
+
+    /*
+     * Five independent accounting triples:
+     *
+     * reserve:   pending, released, lifetime
+     * buyback:   pending, released, lifetime
+     * liquidity: pending, released, lifetime
+     * company:   pending, released, lifetime
+     * founder:   pending, released, lifetime
+     */
+
+    let pending_reserve = read_u64(data, 0);
+    let released_reserve = read_u64(data, 8);
+    let lifetime_reserve = read_u64(data, 16);
+
+    let pending_buyback_burn = read_u64(data, 24);
+    let released_buyback_burn = read_u64(data, 32);
+    let lifetime_buyback_burn = read_u64(data, 40);
+
+    let pending_liquidity = read_u64(data, 48);
+    let released_liquidity = read_u64(data, 56);
+    let lifetime_liquidity = read_u64(data, 64);
+
+    let pending_company = read_u64(data, 72);
+    let released_company = read_u64(data, 80);
+    let lifetime_company = read_u64(data, 88);
+
+    let pending_founder = read_u64(data, 96);
+    let released_founder = read_u64(data, 104);
+    let lifetime_founder = read_u64(data, 112);
+
+    let treasury = TreasuryState {
+        version: 1,
+        protocol: Pubkey::default(),
+        settlement_mint: Pubkey::default(),
+        settlement_vault: Pubkey::default(),
+
+        total_fees_received: 0,
+        total_fees_allocated: 0,
+
+        pending_reserve,
+        pending_buyback_burn,
+        pending_liquidity,
+        pending_company,
+        pending_founder,
+
+        lifetime_reserve,
+        lifetime_buyback_burn,
+        lifetime_liquidity,
+        lifetime_company,
+        lifetime_founder,
+
+        released_reserve,
+        released_buyback_burn,
+        released_liquidity,
+        released_company,
+        released_founder,
+
+        last_processed_at: 0,
+        processing_epoch: 0,
+        waterfall_stage: 0,
+        buybacks_paused: false,
+        bump: 0,
+        reserved: [0; 24],
+    };
+
+    let reserve_valid =
+        reference_bucket_is_valid(pending_reserve, released_reserve, lifetime_reserve);
+
+    let buyback_valid = reference_bucket_is_valid(
+        pending_buyback_burn,
+        released_buyback_burn,
+        lifetime_buyback_burn,
+    );
+
+    let liquidity_valid =
+        reference_bucket_is_valid(pending_liquidity, released_liquidity, lifetime_liquidity);
+
+    let company_valid =
+        reference_bucket_is_valid(pending_company, released_company, lifetime_company);
+
+    let founder_valid =
+        reference_bucket_is_valid(pending_founder, released_founder, lifetime_founder);
+
+    assert_eq!(
+        treasury.reserve_accounting_is_valid(),
+        reserve_valid,
+        "Reserve accounting disagreed with checked reference model: \
+         pending={pending_reserve}, released={released_reserve}, \
+         lifetime={lifetime_reserve}"
+    );
+
+    assert_eq!(
+        treasury.buyback_accounting_is_valid(),
+        buyback_valid,
+        "Buyback accounting disagreed with checked reference model: \
+         pending={pending_buyback_burn}, \
+         released={released_buyback_burn}, \
+         lifetime={lifetime_buyback_burn}"
+    );
+
+    assert_eq!(
+        treasury.liquidity_accounting_is_valid(),
+        liquidity_valid,
+        "Liquidity accounting disagreed with checked reference model: \
+         pending={pending_liquidity}, released={released_liquidity}, \
+         lifetime={lifetime_liquidity}"
+    );
+
+    assert_eq!(
+        treasury.company_accounting_is_valid(),
+        company_valid,
+        "Company accounting disagreed with checked reference model: \
+         pending={pending_company}, released={released_company}, \
+         lifetime={lifetime_company}"
+    );
+
+    assert_eq!(
+        treasury.founder_accounting_is_valid(),
+        founder_valid,
+        "Founder accounting disagreed with checked reference model: \
+         pending={pending_founder}, released={released_founder}, \
+         lifetime={lifetime_founder}"
+    );
+
+    let execution_valid =
+        reserve_valid && buyback_valid && liquidity_valid && company_valid && founder_valid;
+
+    assert_eq!(
+        treasury.execution_accounting_is_valid(),
+        execution_valid,
+        "Combined execution-accounting result disagreed with \
+         independent bucket validation"
+    );
+
+    // Combined validation must equal the conjunction of production validators.
+    assert_eq!(
+        treasury.execution_accounting_is_valid(),
+        treasury.reserve_accounting_is_valid()
+            && treasury.buyback_accounting_is_valid()
+            && treasury.liquidity_accounting_is_valid()
+            && treasury.company_accounting_is_valid()
+            && treasury.founder_accounting_is_valid(),
+        "Combined validator did not equal all five bucket validators"
+    );
+
+    /*
+     * Construct a guaranteed-valid state from the same pending and released
+     * values whenever all five additions can be represented by u64.
+     */
+    let valid_lifetimes = pending_reserve
+        .checked_add(released_reserve)
+        .zip(pending_buyback_burn.checked_add(released_buyback_burn))
+        .zip(pending_liquidity.checked_add(released_liquidity))
+        .zip(pending_company.checked_add(released_company))
+        .zip(pending_founder.checked_add(released_founder));
+
+    if let Some(((((reserve, buyback), liquidity), company), founder)) = valid_lifetimes {
+        let mut valid = treasury;
+
+        valid.lifetime_reserve = reserve;
+        valid.lifetime_buyback_burn = buyback;
+        valid.lifetime_liquidity = liquidity;
+        valid.lifetime_company = company;
+        valid.lifetime_founder = founder;
+
+        assert!(valid.reserve_accounting_is_valid());
+        assert!(valid.buyback_accounting_is_valid());
+        assert!(valid.liquidity_accounting_is_valid());
+        assert!(valid.company_accounting_is_valid());
+        assert!(valid.founder_accounting_is_valid());
+        assert!(valid.execution_accounting_is_valid());
+
+        // Corrupt exactly one bucket without changing any other bucket.
+        valid.lifetime_reserve = valid.lifetime_reserve.wrapping_add(1);
+
+        assert!(
+            !valid.reserve_accounting_is_valid(),
+            "One-unit reserve corruption was not detected"
+        );
+
+        assert!(
+            !valid.execution_accounting_is_valid(),
+            "Combined accounting accepted a corrupted reserve bucket"
+        );
+    }
+});
+
+===== fuzz/fuzz_targets/waterfall_engine.rs =====
+#![no_main]
+
+use anchor_lang::prelude::Pubkey;
+use libfuzzer_sys::fuzz_target;
+use treasury_router::{
+    engines::waterfall::{
+        allocation_for_stage, classify, WaterfallStage, CAUTION_MIN_RESERVE_BPS,
+        DEFENSIVE_MIN_RESERVE_BPS, NORMAL_MIN_RESERVE_BPS, SURVIVAL_MIN_RESERVE_BPS,
+    },
+    state::TreasuryState,
+};
+
+fn read_u64(data: &[u8], offset: usize) -> u64 {
+    u64::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+        data[offset + 4],
+        data[offset + 5],
+        data[offset + 6],
+        data[offset + 7],
+    ])
+}
+
+fn expected_stage(reserve_ratio_bps: u16) -> WaterfallStage {
+    if reserve_ratio_bps >= NORMAL_MIN_RESERVE_BPS {
+        WaterfallStage::Normal
+    } else if reserve_ratio_bps >= CAUTION_MIN_RESERVE_BPS {
+        WaterfallStage::Caution
+    } else if reserve_ratio_bps >= DEFENSIVE_MIN_RESERVE_BPS {
+        WaterfallStage::Defensive
+    } else if reserve_ratio_bps >= SURVIVAL_MIN_RESERVE_BPS {
+        WaterfallStage::Survival
+    } else {
+        WaterfallStage::Emergency
+    }
+}
+
+fuzz_target!(|data: &[u8]| {
+    // Five independent u64 pending treasury balances.
+    if data.len() < 40 {
+        return;
+    }
+
+    let pending_reserve = read_u64(data, 0);
+    let pending_buyback_burn = read_u64(data, 8);
+    let pending_liquidity = read_u64(data, 16);
+    let pending_company = read_u64(data, 24);
+    let pending_founder = read_u64(data, 32);
+
+    let treasury = TreasuryState {
+        version: 1,
+        protocol: Pubkey::default(),
+        settlement_mint: Pubkey::default(),
+        settlement_vault: Pubkey::default(),
+
+        total_fees_received: 0,
+        total_fees_allocated: 0,
+
+        pending_reserve,
+        pending_buyback_burn,
+        pending_liquidity,
+        pending_company,
+        pending_founder,
+
+        lifetime_reserve: pending_reserve,
+        lifetime_buyback_burn: pending_buyback_burn,
+        lifetime_liquidity: pending_liquidity,
+        lifetime_company: pending_company,
+        lifetime_founder: pending_founder,
+
+        released_reserve: 0,
+        released_buyback_burn: 0,
+        released_liquidity: 0,
+        released_company: 0,
+        released_founder: 0,
+
+        last_processed_at: 0,
+        processing_epoch: 0,
+        waterfall_stage: 0,
+        buybacks_paused: false,
+        bump: 0,
+        reserved: [0; 24],
+    };
+
+    let expected_total = pending_reserve
+        .checked_add(pending_buyback_burn)
+        .and_then(|value| value.checked_add(pending_liquidity))
+        .and_then(|value| value.checked_add(pending_company))
+        .and_then(|value| value.checked_add(pending_founder));
+
+    let evaluation = treasury_router::engines::waterfall::evaluate(&treasury);
+
+    let total_pending = match expected_total {
+        Some(total) => total,
+        None => {
+            assert!(
+                evaluation.is_err(),
+                "Waterfall accepted overflowing pending balances: \
+                 reserve={pending_reserve}, buyback={pending_buyback_burn}, \
+                 liquidity={pending_liquidity}, company={pending_company}, \
+                 founder={pending_founder}"
+            );
+            return;
+        }
+    };
+
+    let evaluation = evaluation.unwrap_or_else(|error| {
+        panic!(
+            "Waterfall rejected non-overflowing treasury state: \
+             reserve={pending_reserve}, buyback={pending_buyback_burn}, \
+             liquidity={pending_liquidity}, company={pending_company}, \
+             founder={pending_founder}, error={error:?}"
+        )
+    });
+
+    assert_eq!(
+        evaluation.total_pending, total_pending,
+        "Waterfall total pending disagreed with checked reference sum"
+    );
+
+    assert_eq!(
+        evaluation.pending_reserve, pending_reserve,
+        "Waterfall reported the wrong pending reserve"
+    );
+
+    let expected_ratio = if total_pending == 0 {
+        10_000u16
+    } else {
+        let ratio = (u128::from(pending_reserve) * 10_000u128) / u128::from(total_pending);
+
+        u16::try_from(ratio).expect("reference reserve ratio exceeded u16")
+    };
+
+    assert!(
+        evaluation.reserve_ratio_bps <= 10_000,
+        "reserve ratio exceeded 100%: {}",
+        evaluation.reserve_ratio_bps
+    );
+
+    assert_eq!(
+        evaluation.reserve_ratio_bps, expected_ratio,
+        "production reserve-ratio math disagreed with reference model"
+    );
+
+    let independently_classified = expected_stage(expected_ratio);
+
+    assert_eq!(
+        evaluation.stage, independently_classified,
+        "Waterfall selected the wrong treasury-health stage"
+    );
+
+    assert_eq!(
+        classify(expected_ratio),
+        independently_classified,
+        "classify() disagreed with the independent threshold model"
+    );
+
+    // Determinism: identical state must always produce identical results.
+    let repeated = treasury_router::engines::waterfall::evaluate(&treasury).unwrap();
+
+    assert_eq!(repeated.stage, evaluation.stage);
+    assert_eq!(repeated.reserve_ratio_bps, evaluation.reserve_ratio_bps);
+    assert_eq!(repeated.total_pending, evaluation.total_pending);
+    assert_eq!(repeated.pending_reserve, evaluation.pending_reserve);
+
+    // Every adaptive Bevernomics profile must conserve exactly 100%.
+    let allocation = allocation_for_stage(evaluation.stage);
+
+    assert_eq!(
+        allocation.total_bps(),
+        10_000,
+        "adaptive allocation failed to conserve 10,000 basis points"
+    );
+
+    for amount in [
+        allocation.reserve_bps,
+        allocation.buyback_burn_bps,
+        allocation.liquidity_bps,
+        allocation.company_bps,
+        allocation.founder_bps,
+    ] {
+        assert!(
+            amount <= 10_000,
+            "individual adaptive allocation exceeded 100%"
+        );
+    }
+
+    match evaluation.stage {
+        WaterfallStage::Normal => {
+            assert_eq!(allocation.reserve_bps, 3_000);
+            assert_eq!(allocation.buyback_burn_bps, 2_000);
+            assert_eq!(allocation.liquidity_bps, 2_000);
+            assert_eq!(allocation.company_bps, 2_000);
+            assert_eq!(allocation.founder_bps, 1_000);
+        }
+
+        WaterfallStage::Survival | WaterfallStage::Emergency => {
+            assert_eq!(allocation.buyback_burn_bps, 0);
+            assert_eq!(allocation.company_bps, 0);
+            assert_eq!(allocation.founder_bps, 0);
+
+            assert_eq!(
+                u32::from(allocation.reserve_bps) + u32::from(allocation.liquidity_bps),
+                10_000
+            );
+        }
+
+        WaterfallStage::Caution | WaterfallStage::Defensive => {}
+    }
+});
+
+===== RELEASE ENGINE =====
+use anchor_lang::prelude::*;
+
+use crate::{
+    engines::execution_guard::ReleaseBucket, errors::TreasuryRouterError, state::TreasuryState,
+};
+
+/// Accounting result produced by a successful treasury release transition.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReleaseTransition {
+    pub bucket: ReleaseBucket,
+    pub amount: u64,
+    pub previous_pending_balance: u64,
+    pub remaining_pending_balance: u64,
+    pub previous_released_balance: u64,
+    pub total_released_balance: u64,
+}
+
+/// Applies the accounting transition for an already-authorized treasury release.
+///
+/// This function does not:
+/// - authorize the release;
+/// - apply the Waterfall or Dam;
+/// - transfer SPL tokens;
+/// - emit an event.
+///
+/// The calling instruction must run the Execution Guard before transferring
+/// tokens. Solana instruction atomicity ensures that a later accounting failure
+/// also rolls back the preceding token CPI.
+pub fn process_release(
+    treasury: &mut TreasuryState,
+    bucket: ReleaseBucket,
+    amount: u64,
+) -> Result<ReleaseTransition> {
+    require!(amount > 0, TreasuryRouterError::InvalidReleaseAmount);
+
+    // Reject any corrupted treasury before calculating or mutating balances.
+    require!(
+        treasury.execution_accounting_is_valid(),
+        TreasuryRouterError::AccountingInvariantViolation
+    );
+
+    let (previous_pending_balance, previous_released_balance) =
+        balances_for_bucket(treasury, bucket);
+
+    require!(
+        amount <= previous_pending_balance,
+        TreasuryRouterError::InsufficientPendingBalance
+    );
+
+    let remaining_pending_balance = previous_pending_balance
+        .checked_sub(amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    let total_released_balance = previous_released_balance
+        .checked_add(amount)
+        .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    set_balances_for_bucket(
+        treasury,
+        bucket,
+        remaining_pending_balance,
+        total_released_balance,
+    );
+
+    require!(
+        bucket_accounting_is_valid(treasury, bucket),
+        TreasuryRouterError::AccountingInvariantViolation
+    );
+
+    require!(
+        treasury.execution_accounting_is_valid(),
+        TreasuryRouterError::AccountingInvariantViolation
+    );
+
+    Ok(ReleaseTransition {
+        bucket,
+        amount,
+        previous_pending_balance,
+        remaining_pending_balance,
+        previous_released_balance,
+        total_released_balance,
+    })
+}
+
+/// Returns pending and released balances for the selected treasury bucket.
+pub fn balances_for_bucket(treasury: &TreasuryState, bucket: ReleaseBucket) -> (u64, u64) {
+    match bucket {
+        ReleaseBucket::Reserve => (treasury.pending_reserve, treasury.released_reserve),
+        ReleaseBucket::BuybackBurn => (
+            treasury.pending_buyback_burn,
+            treasury.released_buyback_burn,
+        ),
+        ReleaseBucket::Liquidity => (treasury.pending_liquidity, treasury.released_liquidity),
+        ReleaseBucket::Company => (treasury.pending_company, treasury.released_company),
+        ReleaseBucket::Founder => (treasury.pending_founder, treasury.released_founder),
+    }
+}
+
+fn set_balances_for_bucket(
+    treasury: &mut TreasuryState,
+    bucket: ReleaseBucket,
+    pending: u64,
+    released: u64,
+) {
+    match bucket {
+        ReleaseBucket::Reserve => {
+            treasury.pending_reserve = pending;
+            treasury.released_reserve = released;
+        }
+        ReleaseBucket::BuybackBurn => {
+            treasury.pending_buyback_burn = pending;
+            treasury.released_buyback_burn = released;
+        }
+        ReleaseBucket::Liquidity => {
+            treasury.pending_liquidity = pending;
+            treasury.released_liquidity = released;
+        }
+        ReleaseBucket::Company => {
+            treasury.pending_company = pending;
+            treasury.released_company = released;
+        }
+        ReleaseBucket::Founder => {
+            treasury.pending_founder = pending;
+            treasury.released_founder = released;
+        }
+    }
+}
+
+fn bucket_accounting_is_valid(treasury: &TreasuryState, bucket: ReleaseBucket) -> bool {
+    match bucket {
+        ReleaseBucket::Reserve => treasury.reserve_accounting_is_valid(),
+        ReleaseBucket::BuybackBurn => treasury.buyback_accounting_is_valid(),
+        ReleaseBucket::Liquidity => treasury.liquidity_accounting_is_valid(),
+        ReleaseBucket::Company => treasury.company_accounting_is_valid(),
+        ReleaseBucket::Founder => treasury.founder_accounting_is_valid(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engines::waterfall::WaterfallStage;
+
+    fn valid_treasury() -> TreasuryState {
+        TreasuryState {
+            version: 1,
+            protocol: Pubkey::new_unique(),
+            settlement_mint: Pubkey::new_unique(),
+            settlement_vault: Pubkey::new_unique(),
+
+            total_fees_received: 1_500,
+            total_fees_allocated: 1_500,
+
+            pending_reserve: 300,
+            pending_buyback_burn: 250,
+            pending_liquidity: 350,
+            pending_company: 400,
+            pending_founder: 200,
+
+            lifetime_reserve: 350,
+            lifetime_buyback_burn: 300,
+            lifetime_liquidity: 400,
+            lifetime_company: 500,
+            lifetime_founder: 250,
+
+            released_reserve: 50,
+            released_buyback_burn: 50,
+            released_liquidity: 50,
+            released_company: 100,
+            released_founder: 50,
+
+            last_processed_at: 1,
+            processing_epoch: 1,
+            waterfall_stage: WaterfallStage::Normal.as_u8(),
+            buybacks_paused: false,
+            bump: 255,
+            reserved: [0; 24],
+        }
+    }
+
+    fn assert_release(bucket: ReleaseBucket, expected_pending: u64, expected_released: u64) {
+        let mut treasury = valid_treasury();
+
+        let before_reserve = (treasury.pending_reserve, treasury.released_reserve);
+        let before_buyback = (
+            treasury.pending_buyback_burn,
+            treasury.released_buyback_burn,
+        );
+        let before_liquidity = (treasury.pending_liquidity, treasury.released_liquidity);
+        let before_company = (treasury.pending_company, treasury.released_company);
+        let before_founder = (treasury.pending_founder, treasury.released_founder);
+
+        let transition = process_release(&mut treasury, bucket, 25).unwrap();
+
+        assert_eq!(transition.bucket, bucket);
+        assert_eq!(transition.amount, 25);
+        assert_eq!(transition.remaining_pending_balance, expected_pending);
+        assert_eq!(transition.total_released_balance, expected_released);
+        assert!(treasury.execution_accounting_is_valid());
+
+        if bucket != ReleaseBucket::Reserve {
+            assert_eq!(
+                (treasury.pending_reserve, treasury.released_reserve),
+                before_reserve
+            );
+        }
+
+        if bucket != ReleaseBucket::BuybackBurn {
+            assert_eq!(
+                (
+                    treasury.pending_buyback_burn,
+                    treasury.released_buyback_burn
+                ),
+                before_buyback
+            );
+        }
+
+        if bucket != ReleaseBucket::Liquidity {
+            assert_eq!(
+                (treasury.pending_liquidity, treasury.released_liquidity),
+                before_liquidity
+            );
+        }
+
+        if bucket != ReleaseBucket::Company {
+            assert_eq!(
+                (treasury.pending_company, treasury.released_company),
+                before_company
+            );
+        }
+
+        if bucket != ReleaseBucket::Founder {
+            assert_eq!(
+                (treasury.pending_founder, treasury.released_founder),
+                before_founder
+            );
+        }
+    }
+
+    #[test]
+    fn processes_reserve_release() {
+        assert_release(ReleaseBucket::Reserve, 275, 75);
+    }
+
+    #[test]
+    fn processes_buyback_release() {
+        assert_release(ReleaseBucket::BuybackBurn, 225, 75);
+    }
+
+    #[test]
+    fn processes_liquidity_release() {
+        assert_release(ReleaseBucket::Liquidity, 325, 75);
+    }
+
+    #[test]
+    fn processes_company_release() {
+        assert_release(ReleaseBucket::Company, 375, 125);
+    }
+
+    #[test]
+    fn processes_founder_release() {
+        assert_release(ReleaseBucket::Founder, 175, 75);
+    }
+
+    #[test]
+    fn rejects_zero_release_without_mutating_treasury() {
+        let mut treasury = valid_treasury();
+        let before = balances_for_bucket(&treasury, ReleaseBucket::Reserve);
+
+        assert!(process_release(&mut treasury, ReleaseBucket::Reserve, 0).is_err());
+        assert_eq!(
+            balances_for_bucket(&treasury, ReleaseBucket::Reserve),
+            before
+        );
+    }
+
+    #[test]
+    fn rejects_release_above_pending_without_mutating_treasury() {
+        let mut treasury = valid_treasury();
+        let before = balances_for_bucket(&treasury, ReleaseBucket::Founder);
+
+        assert!(process_release(&mut treasury, ReleaseBucket::Founder, 201).is_err());
+
+        assert_eq!(
+            balances_for_bucket(&treasury, ReleaseBucket::Founder),
+            before
+        );
+    }
+
+    #[test]
+    fn rejects_corrupted_selected_bucket_before_mutation() {
+        let mut treasury = valid_treasury();
+        treasury.lifetime_company += 1;
+
+        let before = balances_for_bucket(&treasury, ReleaseBucket::Company);
+
+        assert!(process_release(&mut treasury, ReleaseBucket::Company, 25).is_err());
+
+        assert_eq!(
+            balances_for_bucket(&treasury, ReleaseBucket::Company),
+            before
+        );
+    }
+
+    #[test]
+    fn rejects_corrupted_unrelated_bucket_before_mutation() {
+        let mut treasury = valid_treasury();
+        treasury.lifetime_founder += 1;
+
+        let before = balances_for_bucket(&treasury, ReleaseBucket::Reserve);
+
+        assert!(process_release(&mut treasury, ReleaseBucket::Reserve, 25).is_err());
+
+        assert_eq!(
+            balances_for_bucket(&treasury, ReleaseBucket::Reserve),
+            before
+        );
+    }
+
+    #[test]
+    fn rejects_released_balance_overflow_without_mutation() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_reserve = 1;
+        treasury.released_reserve = u64::MAX;
+        treasury.lifetime_reserve = u64::MAX;
+
+        let before = balances_for_bucket(&treasury, ReleaseBucket::Reserve);
+
+        // The pre-existing state is itself invalid because pending + released
+        // overflows, so the transition must fail closed before mutation.
+        assert!(process_release(&mut treasury, ReleaseBucket::Reserve, 1).is_err());
+
+        assert_eq!(
+            balances_for_bucket(&treasury, ReleaseBucket::Reserve),
+            before
+        );
+    }
+
+    #[test]
+    fn full_pending_balance_can_be_released() {
+        let mut treasury = valid_treasury();
+        let amount = treasury.pending_buyback_burn;
+
+        let transition =
+            process_release(&mut treasury, ReleaseBucket::BuybackBurn, amount).unwrap();
+
+        assert_eq!(transition.remaining_pending_balance, 0);
+        assert_eq!(
+            transition.total_released_balance,
+            treasury.lifetime_buyback_burn
+        );
+        assert!(treasury.buyback_accounting_is_valid());
+        assert!(treasury.execution_accounting_is_valid());
+    }
+}
+
+===== TREASURY STATE =====
+use anchor_lang::prelude::*;
+
+#[account]
+pub struct TreasuryState {
+    /// State layout version for future migrations.
+    pub version: u16,
+
+    /// Root ProtocolState controlling this treasury.
+    pub protocol: Pubkey,
+
+    /// Mint in which fees are accounted.
+    pub settlement_mint: Pubkey,
+
+    /// SPL Token vault holding the treasury's settlement tokens.
+    pub settlement_vault: Pubkey,
+
+    /// Total fee units received by the treasury engine.
+    pub total_fees_received: u64,
+
+    /// Total fee units assigned to protocol buckets.
+    pub total_fees_allocated: u64,
+
+    /// Amounts assigned but not yet transferred or spent.
+    pub pending_reserve: u64,
+    pub pending_buyback_burn: u64,
+    pub pending_liquidity: u64,
+    pub pending_company: u64,
+    pub pending_founder: u64,
+
+    /// Lifetime allocations for transparent protocol accounting.
+    pub lifetime_reserve: u64,
+    pub lifetime_buyback_burn: u64,
+    pub lifetime_liquidity: u64,
+    pub lifetime_company: u64,
+    pub lifetime_founder: u64,
+
+    /// Lifetime settlement-token amounts actually released from the treasury.
+    pub released_reserve: u64,
+    pub released_buyback_burn: u64,
+    pub released_liquidity: u64,
+    pub released_company: u64,
+    pub released_founder: u64,
+
+    /// Last successful fee-processing timestamp.
+    pub last_processed_at: i64,
+
+    /// Increments after every successful accounting cycle.
+    pub processing_epoch: u64,
+
+    /// Current Survival Waterfall operating stage.
+    pub waterfall_stage: u8,
+
+    /// Buyback execution can be paused independently.
+    pub buybacks_paused: bool,
+
+    /// Canonical treasury PDA bump.
+    pub bump: u8,
+
+    /// Reserved account space for compatible future fields.
+    pub reserved: [u8; 24],
+}
+
+impl TreasuryState {
+    pub const SPACE: usize = 8 +        // Anchor discriminator
+        2 +        // version
+        32 +       // protocol
+        32 +       // settlement_mint
+        32 +       // settlement_vault
+        (19 * 8) + // u64/i64 accounting fields
+        1 +        // waterfall_stage
+        1 +        // buybacks_paused
+        1 +        // bump
+        24; // reserved
+
+    /// Validates one accounting bucket using fail-closed checked arithmetic.
+    ///
+    /// The invariant is:
+    ///
+    /// lifetime == pending + released
+    ///
+    /// Arithmetic overflow is always invalid. It must never be converted to
+    /// or saturated at u64::MAX because that could make a corrupted state
+    /// appear valid when lifetime is also u64::MAX.
+    fn accounting_bucket_is_valid(pending: u64, released: u64, lifetime: u64) -> bool {
+        pending
+            .checked_add(released)
+            .is_some_and(|total| total == lifetime)
+    }
+
+    pub fn reserve_accounting_is_valid(&self) -> bool {
+        Self::accounting_bucket_is_valid(
+            self.pending_reserve,
+            self.released_reserve,
+            self.lifetime_reserve,
+        )
+    }
+
+    pub fn buyback_accounting_is_valid(&self) -> bool {
+        Self::accounting_bucket_is_valid(
+            self.pending_buyback_burn,
+            self.released_buyback_burn,
+            self.lifetime_buyback_burn,
+        )
+    }
+
+    pub fn liquidity_accounting_is_valid(&self) -> bool {
+        Self::accounting_bucket_is_valid(
+            self.pending_liquidity,
+            self.released_liquidity,
+            self.lifetime_liquidity,
+        )
+    }
+
+    pub fn company_accounting_is_valid(&self) -> bool {
+        Self::accounting_bucket_is_valid(
+            self.pending_company,
+            self.released_company,
+            self.lifetime_company,
+        )
+    }
+
+    pub fn founder_accounting_is_valid(&self) -> bool {
+        Self::accounting_bucket_is_valid(
+            self.pending_founder,
+            self.released_founder,
+            self.lifetime_founder,
+        )
+    }
+
+    pub fn execution_accounting_is_valid(&self) -> bool {
+        self.reserve_accounting_is_valid()
+            && self.buyback_accounting_is_valid()
+            && self.liquidity_accounting_is_valid()
+            && self.company_accounting_is_valid()
+            && self.founder_accounting_is_valid()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_treasury() -> TreasuryState {
+        TreasuryState {
+            version: 1,
+            protocol: Pubkey::new_unique(),
+            settlement_mint: Pubkey::new_unique(),
+            settlement_vault: Pubkey::new_unique(),
+
+            total_fees_received: 1_500,
+            total_fees_allocated: 1_500,
+
+            pending_reserve: 250,
+            pending_buyback_burn: 200,
+            pending_liquidity: 300,
+            pending_company: 400,
+            pending_founder: 100,
+
+            lifetime_reserve: 300,
+            lifetime_buyback_burn: 250,
+            lifetime_liquidity: 350,
+            lifetime_company: 500,
+            lifetime_founder: 100,
+
+            released_reserve: 50,
+            released_buyback_burn: 50,
+            released_liquidity: 50,
+            released_company: 100,
+            released_founder: 0,
+
+            last_processed_at: 1,
+            processing_epoch: 1,
+            waterfall_stage: 0,
+            buybacks_paused: false,
+            bump: 255,
+            reserved: [0; 24],
+        }
+    }
+
+    #[test]
+    fn reserve_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
+        let treasury = valid_treasury();
+
+        assert!(treasury.reserve_accounting_is_valid());
+    }
+
+    #[test]
+    fn reserve_accounting_is_invalid_when_values_do_not_balance() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_reserve = 299;
+
+        assert!(!treasury.reserve_accounting_is_valid());
+    }
+
+    #[test]
+    fn reserve_accounting_fails_closed_on_overflow() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_reserve = u64::MAX;
+        treasury.released_reserve = 1;
+        treasury.lifetime_reserve = 0;
+
+        assert!(!treasury.reserve_accounting_is_valid());
+    }
+
+    #[test]
+    fn buyback_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
+        let treasury = valid_treasury();
+
+        assert!(treasury.buyback_accounting_is_valid());
+    }
+
+    #[test]
+    fn buyback_accounting_is_invalid_when_values_do_not_balance() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_buyback_burn = 249;
+
+        assert!(!treasury.buyback_accounting_is_valid());
+    }
+
+    #[test]
+    fn buyback_accounting_fails_closed_on_overflow() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_buyback_burn = u64::MAX;
+        treasury.released_buyback_burn = 1;
+        treasury.lifetime_buyback_burn = 0;
+
+        assert!(!treasury.buyback_accounting_is_valid());
+    }
+
+    #[test]
+    fn liquidity_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
+        let treasury = valid_treasury();
+
+        assert!(treasury.liquidity_accounting_is_valid());
+    }
+
+    #[test]
+    fn liquidity_accounting_is_invalid_when_values_do_not_balance() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_liquidity = 349;
+
+        assert!(!treasury.liquidity_accounting_is_valid());
+    }
+
+    #[test]
+    fn liquidity_accounting_fails_closed_on_overflow() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_liquidity = u64::MAX;
+        treasury.released_liquidity = 1;
+        treasury.lifetime_liquidity = 0;
+
+        assert!(!treasury.liquidity_accounting_is_valid());
+    }
+
+    #[test]
+    fn company_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
+        let treasury = valid_treasury();
+
+        assert!(treasury.company_accounting_is_valid());
+    }
+
+    #[test]
+    fn company_accounting_is_invalid_when_values_do_not_balance() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_company = 499;
+
+        assert!(!treasury.company_accounting_is_valid());
+    }
+
+    #[test]
+    fn company_accounting_fails_closed_on_overflow() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_company = u64::MAX;
+        treasury.released_company = 1;
+        treasury.lifetime_company = 0;
+
+        assert!(!treasury.company_accounting_is_valid());
+    }
+
+    #[test]
+    fn founder_accounting_is_valid_when_lifetime_equals_pending_plus_released() {
+        let treasury = valid_treasury();
+
+        assert!(treasury.founder_accounting_is_valid());
+    }
+
+    #[test]
+    fn founder_accounting_is_invalid_when_values_do_not_balance() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_founder = 99;
+
+        assert!(!treasury.founder_accounting_is_valid());
+    }
+
+    #[test]
+    fn founder_accounting_fails_closed_on_overflow() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_founder = u64::MAX;
+        treasury.released_founder = 1;
+        treasury.lifetime_founder = 0;
+
+        assert!(!treasury.founder_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_valid_when_every_bucket_balances() {
+        let treasury = valid_treasury();
+
+        assert!(treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_invalid_when_reserve_is_corrupted() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_reserve += 1;
+
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_invalid_when_buyback_is_corrupted() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_buyback_burn += 1;
+
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_invalid_when_liquidity_is_corrupted() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_liquidity += 1;
+
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_invalid_when_company_is_corrupted() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_company += 1;
+
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_invalid_when_founder_is_corrupted() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_founder += 1;
+
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn execution_accounting_is_invalid_when_multiple_buckets_are_corrupted() {
+        let mut treasury = valid_treasury();
+
+        treasury.lifetime_reserve += 1;
+        treasury.lifetime_liquidity += 1;
+        treasury.lifetime_founder += 1;
+
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn overflow_with_max_lifetime_fails_closed_for_every_bucket() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_reserve = u64::MAX;
+        treasury.released_reserve = u64::MAX;
+        treasury.lifetime_reserve = u64::MAX;
+
+        treasury.pending_buyback_burn = u64::MAX;
+        treasury.released_buyback_burn = u64::MAX;
+        treasury.lifetime_buyback_burn = u64::MAX;
+
+        treasury.pending_liquidity = u64::MAX;
+        treasury.released_liquidity = u64::MAX;
+        treasury.lifetime_liquidity = u64::MAX;
+
+        treasury.pending_company = u64::MAX;
+        treasury.released_company = u64::MAX;
+        treasury.lifetime_company = u64::MAX;
+
+        treasury.pending_founder = u64::MAX;
+        treasury.released_founder = u64::MAX;
+        treasury.lifetime_founder = u64::MAX;
+
+        assert!(!treasury.reserve_accounting_is_valid());
+        assert!(!treasury.buyback_accounting_is_valid());
+        assert!(!treasury.liquidity_accounting_is_valid());
+        assert!(!treasury.company_accounting_is_valid());
+        assert!(!treasury.founder_accounting_is_valid());
+        assert!(!treasury.execution_accounting_is_valid());
+    }
+
+    #[test]
+    fn zero_balances_are_valid_accounting() {
+        let mut treasury = valid_treasury();
+
+        treasury.pending_reserve = 0;
+        treasury.pending_buyback_burn = 0;
+        treasury.pending_liquidity = 0;
+        treasury.pending_company = 0;
+        treasury.pending_founder = 0;
+
+        treasury.lifetime_reserve = 0;
+
+===== RELEASE BUCKET =====
+programs/treasury-router/src/engines/execution_guard.rs-5-        beaver_score,
+programs/treasury-router/src/engines/execution_guard.rs-6-        dam::{self, DamLevel},
+programs/treasury-router/src/engines/execution_guard.rs-7-        waterfall::{self, WaterfallStage},
+programs/treasury-router/src/engines/execution_guard.rs-8-    },
+programs/treasury-router/src/engines/execution_guard.rs-9-    errors::TreasuryRouterError,
+programs/treasury-router/src/engines/execution_guard.rs-10-    state::{ProtocolState, TreasuryState},
+programs/treasury-router/src/engines/execution_guard.rs-11-};
+programs/treasury-router/src/engines/execution_guard.rs-12-
+programs/treasury-router/src/engines/execution_guard.rs-13-/// Treasury bucket requesting permission to release funds.
+programs/treasury-router/src/engines/execution_guard.rs-14-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+programs/treasury-router/src/engines/execution_guard.rs:15:pub enum ReleaseBucket {
+programs/treasury-router/src/engines/execution_guard.rs-16-    Reserve,
+programs/treasury-router/src/engines/execution_guard.rs-17-    BuybackBurn,
+programs/treasury-router/src/engines/execution_guard.rs-18-    Liquidity,
+programs/treasury-router/src/engines/execution_guard.rs-19-    Company,
+programs/treasury-router/src/engines/execution_guard.rs-20-    Founder,
+programs/treasury-router/src/engines/execution_guard.rs-21-}
+programs/treasury-router/src/engines/execution_guard.rs-22-
+programs/treasury-router/src/engines/execution_guard.rs-23-/// Result returned by the central execution-security gate.
+programs/treasury-router/src/engines/execution_guard.rs-24-pub struct ExecutionAuthorization {
+programs/treasury-router/src/engines/execution_guard.rs-25-    pub bucket: ReleaseBucket,
+programs/treasury-router/src/engines/execution_guard.rs-26-    pub requested_amount: u64,
+programs/treasury-router/src/engines/execution_guard.rs-27-    pub pending_balance: u64,
+programs/treasury-router/src/engines/execution_guard.rs-28-    pub maximum_release: u64,
+programs/treasury-router/src/engines/execution_guard.rs-29-    pub waterfall_stage: WaterfallStage,
+programs/treasury-router/src/engines/execution_guard.rs-30-    pub dam_level: DamLevel,
+programs/treasury-router/src/engines/execution_guard.rs-31-    pub release_bps: u16,
+programs/treasury-router/src/engines/execution_guard.rs-32-    pub reserve_ratio_bps: u16,
+programs/treasury-router/src/engines/execution_guard.rs-33-}
+programs/treasury-router/src/engines/execution_guard.rs-34-
+programs/treasury-router/src/engines/execution_guard.rs-35-/// Authorizes a treasury release through the mandatory RBVR security layer.
+programs/treasury-router/src/engines/execution_guard.rs-36-///
+programs/treasury-router/src/engines/execution_guard.rs-37-/// Account ownership, PDA seeds, signer authority, mint validation, and
+programs/treasury-router/src/engines/execution_guard.rs-38-/// protocol-to-treasury linkage must be enforced by the Anchor instruction
+programs/treasury-router/src/engines/execution_guard.rs-39-/// account constraints that call this function.
+programs/treasury-router/src/engines/execution_guard.rs-40-pub fn authorize_release(
+programs/treasury-router/src/engines/execution_guard.rs-41-    protocol: &ProtocolState,
+programs/treasury-router/src/engines/execution_guard.rs-42-    treasury: &TreasuryState,
+programs/treasury-router/src/engines/execution_guard.rs-43-    bucket: ReleaseBucket,
+programs/treasury-router/src/engines/execution_guard.rs-44-    requested_amount: u64,
+programs/treasury-router/src/engines/execution_guard.rs-45-) -> Result<ExecutionAuthorization> {
+
+===== CURRENT STATUS =====
+ M programs/treasury-router/src/engines/mod.rs
+ M programs/treasury-router/src/instructions/buyback.rs
+ M programs/treasury-router/src/instructions/company.rs
+ M programs/treasury-router/src/instructions/founder.rs
+ M programs/treasury-router/src/instructions/liquidity.rs
+ M programs/treasury-router/src/instructions/reserve.rs
+?? programs/treasury-router/src/engines/release.rs
+?? rbvr-release-fuzz-source.txt
