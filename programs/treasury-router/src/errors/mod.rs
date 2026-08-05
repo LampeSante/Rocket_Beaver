@@ -168,4 +168,28 @@ pub enum TreasuryRouterError {
 
     #[msg("The Founder annual US$3,000,000 cap would be exceeded.")]
     FounderAnnualUsdCapExceeded,
+
+    #[msg("The Founder price-state version is invalid.")]
+    InvalidFounderPriceVersion,
+
+    #[msg("The Founder price-state protocol link is invalid.")]
+    InvalidFounderPriceProtocol,
+
+    #[msg("The Founder price-state settlement mint is invalid.")]
+    InvalidFounderPriceSettlementMint,
+
+    #[msg("The Founder oracle adapter authority is invalid.")]
+    InvalidFounderOracleAdapter,
+
+    #[msg("The Founder price mechanism is disabled.")]
+    FounderPriceDisabled,
+
+    #[msg("The Founder oracle publication time is invalid.")]
+    InvalidFounderOraclePublishTime,
+
+    #[msg("The Founder oracle price is stale.")]
+    FounderOraclePriceStale,
+
+    #[msg("The Founder oracle confidence interval is too wide.")]
+    FounderOracleConfidenceTooWide,
 }

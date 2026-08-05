@@ -16,3 +16,7 @@ pub use treasury::*;
 
 pub mod founder_usd_cap;
 pub use founder_usd_cap::*;
+
+pub mod founder_price;
+
+pub use founder_price::*;
