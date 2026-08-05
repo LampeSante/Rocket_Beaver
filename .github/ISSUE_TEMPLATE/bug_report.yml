@@ -1,0 +1,26 @@
+name: Bug report
+description: Report reproducible unexpected behaviour
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit or tag
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Remove secrets before posting.
