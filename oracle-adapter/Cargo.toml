@@ -3,3 +3,7 @@ members = [
     "programs/rbvr-oracle-adapter",
 ]
 resolver = "2"
+
+
+[profile.release]
+overflow-checks = true

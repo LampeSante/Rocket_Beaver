@@ -17,6 +17,7 @@ no-idl = []
 no-log-ix-name = []
 idl-build = [
     "anchor-lang/idl-build",
+    "treasury-router/idl-build",
 ]
 
 [dependencies]
