@@ -130,8 +130,6 @@ describe("RBVR Devnet Process Fees With Live Oracle", function () {
 
         settlementVault,
 
-        authority:
-          provider.wallet.publicKey,
       })
       .rpc();
 
@@ -156,8 +154,6 @@ describe("RBVR Devnet Process Fees With Live Oracle", function () {
       .accounts({
         settlementMint:
           capBefore.settlementMint,
-
-        founderState,
 
         founderUsdCap,
 
