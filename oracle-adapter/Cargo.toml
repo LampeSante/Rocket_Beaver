@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "programs/rbvr-oracle-adapter",
+]
+resolver = "2"
