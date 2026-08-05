@@ -97,4 +97,18 @@ pub mod treasury_router {
     pub fn authorize_company_execution(ctx: Context<AuthorizeCompanyExecution>) -> Result<()> {
         instructions::company::handler(ctx)
     }
+
+    pub fn initialize_founder_usd_cap(
+        ctx: Context<InitializeFounderUsdCap>,
+        price_feed_id: [u8; 32],
+        max_price_age_seconds: u64,
+        max_confidence_bps: u16,
+    ) -> Result<()> {
+        instructions::initialize_founder_usd_cap::handler(
+            ctx,
+            price_feed_id,
+            max_price_age_seconds,
+            max_confidence_bps,
+        )
+    }
 }
