@@ -153,3 +153,73 @@ impl FounderPriceState {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn valid_price_state() -> FounderPriceState {
+        FounderPriceState {
+            version: FOUNDER_PRICE_VERSION,
+            protocol: Pubkey::new_unique(),
+            settlement_mint: Pubkey::new_unique(),
+            price_feed_id: [9u8; 32],
+            oracle_adapter_authority: Pubkey::new_unique(),
+            price: 100_000_000,
+            exponent: -8,
+            confidence: 100_000,
+            publish_time: 1_000,
+            received_at: 1_001,
+            sequence: 1,
+            max_price_age_seconds: 60,
+            max_confidence_bps: 100,
+            enabled: true,
+            bump: 255,
+            reserved: [0u8; 64],
+        }
+    }
+
+    #[test]
+    fn valid_price_passes() {
+        let state = valid_price_state();
+        assert!(state.validate_price(1_030).is_ok());
+    }
+
+    #[test]
+    fn stale_price_fails() {
+        let state = valid_price_state();
+        assert!(state.validate_price(1_061).is_err());
+    }
+
+    #[test]
+    fn future_price_fails() {
+        let state = valid_price_state();
+        assert!(state.validate_price(999).is_err());
+    }
+
+    #[test]
+    fn non_positive_price_fails() {
+        let mut state = valid_price_state();
+        state.price = 0;
+
+        assert!(state.validate_price(1_030).is_err());
+    }
+
+    #[test]
+    fn excessive_confidence_fails() {
+        let mut state = valid_price_state();
+
+        // 2% confidence width against a 1% configured maximum.
+        state.confidence = 2_000_000;
+
+        assert!(state.validate_price(1_030).is_err());
+    }
+
+    #[test]
+    fn disabled_price_state_fails() {
+        let mut state = valid_price_state();
+        state.enabled = false;
+
+        assert!(state.validate_price(1_030).is_err());
+    }
+}

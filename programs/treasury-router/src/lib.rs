@@ -111,4 +111,38 @@ pub mod treasury_router {
             max_confidence_bps,
         )
     }
+
+    pub fn initialize_founder_price(
+        ctx: Context<InitializeFounderPrice>,
+        price_feed_id: [u8; 32],
+        oracle_adapter_authority: Pubkey,
+        max_price_age_seconds: u64,
+        max_confidence_bps: u16,
+    ) -> Result<()> {
+        instructions::initialize_founder_price::handler(
+            ctx,
+            price_feed_id,
+            oracle_adapter_authority,
+            max_price_age_seconds,
+            max_confidence_bps,
+        )
+    }
+
+    pub fn submit_founder_price(
+        ctx: Context<SubmitFounderPrice>,
+        price_feed_id: [u8; 32],
+        price: i64,
+        exponent: i32,
+        confidence: u64,
+        publish_time: i64,
+    ) -> Result<()> {
+        instructions::submit_founder_price::handler(
+            ctx,
+            price_feed_id,
+            price,
+            exponent,
+            confidence,
+            publish_time,
+        )
+    }
 }

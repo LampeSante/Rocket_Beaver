@@ -192,4 +192,7 @@ pub enum TreasuryRouterError {
 
     #[msg("The Founder oracle confidence interval is too wide.")]
     FounderOracleConfidenceTooWide,
+
+    #[msg("The submitted Founder oracle price is not newer than the stored price.")]
+    FounderOraclePriceNotNewer,
 }
