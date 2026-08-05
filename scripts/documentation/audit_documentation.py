@@ -35,11 +35,11 @@ RISK_TERMS = {
         "cannot be changed",
         "non-upgradeable",
     ],
-    "progressive_founder": [
-        "progressive marginal",
-        "marginal volume",
-        "declining founder rate",
-        "progressive compensation",
+    "founder_fixed_rate": [
+        "fixed founder rate",
+        "10% of the protocol",
+        "0.1% of eligible transaction volume",
+        "annual founder cap",
     ],
     "permissionless": [
         "permissionless",
@@ -245,43 +245,31 @@ def evaluate(
     category: str,
     corpus: list[tuple[Path, list[str]]],
 ) -> Finding:
-    if category == "progressive_founder":
-        algorithm_evidence = search(
+    if category == "founder_fixed_rate":
+        evidence = search(
             corpus,
             [
-                r"current_tier",
-                r"Progressive compensation tier",
+                r"INITIAL_FOUNDER_BPS",
+                r"founder_bps",
                 r"period_cap",
+                r"earned_current_period",
+                r"liquidity_overflow_amount",
             ],
         )
 
-        marginal_math = search(
-            corpus,
-            [
-                r"marginal",
-                r"tier_rate",
-                r"volume_tier",
-                r"declining.*rate",
-                r"rate.*declin",
-            ],
-        )
-
-        strong_math = [
-            item
-            for item in marginal_math
-            if item.path.suffix == ".rs"
-            and "founder" in item.path.name.lower()
-        ]
-
-        if strong_math:
+        if evidence:
             return Finding(
                 document,
                 line,
                 claim,
                 category,
                 "VERIFIED",
-                "Founder marginal-tier mathematics was found in the Rust implementation.",
-                strong_math,
+                (
+                    "Founder allocation uses the fixed configured Founder basis-point share, "
+                    "is constrained by a period cap, and redirects capped excess to Liquidity. "
+                    "Annual enforcement depends on initializing the period duration to one year."
+                ),
+                evidence,
             )
 
         return Finding(
@@ -290,11 +278,8 @@ def evaluate(
             claim,
             category,
             "UNSUPPORTED",
-            (
-                "The implementation contains `current_tier` and period-cap state, "
-                "but this audit did not find a progressive marginal-rate calculation."
-            ),
-            algorithm_evidence,
+            "The fixed Founder rate or annual-cap controls were not found.",
+            [],
         )
 
     if category == "overflow":

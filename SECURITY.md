@@ -110,7 +110,7 @@ Security reviewers should prioritize:
 5. destination uniqueness and locking;
 6. fee conservation;
 7. period rollover;
-8. Founder progressive marginal schedule;
+8. fixed Founder rate and annual-cap enforcement;
 9. Company and Founder overflow;
 10. Reserve floor arithmetic;
 11. cooldown and replay protection;

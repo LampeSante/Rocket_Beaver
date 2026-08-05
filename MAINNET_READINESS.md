@@ -35,7 +35,8 @@
 - [ ] Company cap confirmed
 - [ ] Founder cap confirmed
 - [ ] Period duration confirmed
-- [ ] Founder tiers confirmed
+- [ ] Fixed Founder rate confirmed
+- [ ] Annual Founder cap confirmed
 - [ ] Reserve floor confirmed
 - [ ] Spillway ratio confirmed
 - [ ] Cooldown confirmed

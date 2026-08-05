@@ -14,7 +14,7 @@ Operational scripts and tests are supporting evidence but should be reviewed sep
 4. fee conservation;
 5. settlement vault authority;
 6. destination locking;
-7. Founder marginal schedule;
+7. fixed Founder rate and annual-cap enforcement;
 8. Company and Founder caps;
 9. overflow to Liquidity Growth;
 10. release atomicity;

@@ -14,7 +14,7 @@ Current milestone: **`v1.1.0-devnet-verified`**
 | Company/Operations | 20% |
 | Founder Compensation | 10% |
 
-Company and Founder controls are period-based. When either period cap is reached, overflow is redirected to Liquidity Growth. Founder compensation is period-capped and includes a `current_tier` state field. The current source audit did not verify an implemented progressive marginal-rate calculation, so no declining-rate schedule is claimed here.
+Company and Founder controls are period-based. When either period cap is reached, overflow is redirected to Liquidity Growth. Founder compensation receives a fixed 10% of the protocol’s 1% fee, equivalent to 0.1% of eligible transaction volume before the annual cap is applied. The Founder rate never changes. Once the annual cap is reached, excess Founder allocation is redirected to Liquidity Growth.
 
 ## Security model
 
