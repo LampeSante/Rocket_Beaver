@@ -42,3 +42,5 @@ pub use initialize_founder_price::*;
 pub mod submit_founder_price;
 
 pub use submit_founder_price::*;
+pub mod migrate_founder_feed_id;
+pub use migrate_founder_feed_id::*;

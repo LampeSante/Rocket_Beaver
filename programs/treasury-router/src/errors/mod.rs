@@ -195,4 +195,13 @@ pub enum TreasuryRouterError {
 
     #[msg("The submitted Founder oracle price is not newer than the stored price.")]
     FounderOraclePriceNotNewer,
+
+    #[msg("The Founder feed migration is no longer available.")]
+    FounderFeedMigrationUnavailable,
+
+    #[msg("The Founder oracle state has already been used and cannot be migrated.")]
+    FounderFeedMigrationStateUsed,
+
+    #[msg("The replacement Founder feed ID cannot equal the placeholder feed ID.")]
+    InvalidFounderFeedMigrationTarget,
 }

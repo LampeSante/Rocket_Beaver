@@ -8,6 +8,7 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import {
+  Keypair,
   PublicKey,
   SystemProgram,
 } from "@solana/web3.js";
@@ -57,6 +58,13 @@ describe("Oracle → Founder USD Cap integration", () => {
   let settlementMint: PublicKey;
 
   const FOUNDER_PRICE_FEED_ID = Array<number>(32).fill(7);
+
+  const PYTH_USDC_USD_FEED_ID = Array.from(
+    Buffer.from(
+      "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+      "hex",
+    ),
+  );
   const FOUNDER_MAX_PRICE_AGE_SECONDS = new anchor.BN(300);
   const FOUNDER_MAX_CONFIDENCE_BPS = 100;
   const FOUNDER_ANNUAL_CAP_USD_E6 =
@@ -315,6 +323,264 @@ describe("Oracle → Founder USD Cap integration", () => {
     assert.equal(state.sequence.toString(), "0");
     assert.isTrue(state.enabled);
   });
+
+  it(
+    "rejects Founder feed migration by an unauthorized signer",
+    async () => {
+      const attacker = Keypair.generate();
+
+      let rejected = false;
+      let failureText = "";
+
+      try {
+        await treasuryRouter.methods
+          .migrateFounderFeedId(PYTH_USDC_USD_FEED_ID)
+          .accountsPartial({
+            protocolState: protocolStatePda,
+            founderUsdCap: founderUsdCapPda,
+            founderPrice: founderPricePda,
+            authority: attacker.publicKey,
+          })
+          .signers([attacker])
+          .rpc();
+      } catch (error) {
+        rejected = true;
+        failureText = String(error);
+      }
+
+      assert.isTrue(
+        rejected,
+        "An unauthorized signer must not migrate the Founder feed",
+      );
+
+      assert.match(
+        failureText,
+        /Unauthorized|unauthorized|ConstraintHasOne/i,
+        `Unexpected unauthorized migration failure: ${failureText}`,
+      );
+
+      const cap =
+        await treasuryRouter.account.founderUsdCapState.fetch(
+          founderUsdCapPda,
+        );
+
+      const price =
+        await treasuryRouter.account.founderPriceState.fetch(
+          founderPricePda,
+        );
+
+      assert.deepEqual(
+        Array.from(cap.priceFeedId),
+        FOUNDER_PRICE_FEED_ID,
+      );
+
+      assert.deepEqual(
+        Array.from(price.priceFeedId),
+        FOUNDER_PRICE_FEED_ID,
+      );
+    },
+  );
+
+  it(
+    "rejects zero and placeholder Founder feed migration targets",
+    async () => {
+      for (const invalidFeedId of [
+        Array<number>(32).fill(0),
+        FOUNDER_PRICE_FEED_ID,
+      ]) {
+        let rejected = false;
+        let failureText = "";
+
+        try {
+          await treasuryRouter.methods
+            .migrateFounderFeedId(invalidFeedId)
+            .accountsPartial({
+              protocolState: protocolStatePda,
+              founderUsdCap: founderUsdCapPda,
+              founderPrice: founderPricePda,
+              authority,
+            })
+            .rpc();
+        } catch (error) {
+          rejected = true;
+          failureText = String(error);
+        }
+
+        assert.isTrue(
+          rejected,
+          "An invalid migration target must be rejected",
+        );
+
+        assert.match(
+          failureText,
+          /InvalidFounderUsdPriceFeed|InvalidFounderFeedMigrationTarget|feed/i,
+          `Unexpected invalid-target failure: ${failureText}`,
+        );
+      }
+
+      const cap =
+        await treasuryRouter.account.founderUsdCapState.fetch(
+          founderUsdCapPda,
+        );
+
+      const price =
+        await treasuryRouter.account.founderPriceState.fetch(
+          founderPricePda,
+        );
+
+      assert.deepEqual(
+        Array.from(cap.priceFeedId),
+        FOUNDER_PRICE_FEED_ID,
+      );
+
+      assert.deepEqual(
+        Array.from(price.priceFeedId),
+        FOUNDER_PRICE_FEED_ID,
+      );
+    },
+  );
+
+  it(
+    "atomically migrates both Founder accounts to Pyth USDC/USD",
+    async () => {
+      const signature = await treasuryRouter.methods
+        .migrateFounderFeedId(PYTH_USDC_USD_FEED_ID)
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          founderUsdCap: founderUsdCapPda,
+          founderPrice: founderPricePda,
+          authority,
+        })
+        .rpc();
+
+      assert.isString(signature);
+      assert.isNotEmpty(signature);
+
+      const cap =
+        await treasuryRouter.account.founderUsdCapState.fetch(
+          founderUsdCapPda,
+        );
+
+      const price =
+        await treasuryRouter.account.founderPriceState.fetch(
+          founderPricePda,
+        );
+
+      assert.deepEqual(
+        Array.from(cap.priceFeedId),
+        PYTH_USDC_USD_FEED_ID,
+        "FounderUsdCapState must contain the real feed ID",
+      );
+
+      assert.deepEqual(
+        Array.from(price.priceFeedId),
+        PYTH_USDC_USD_FEED_ID,
+        "FounderPriceState must contain the same real feed ID",
+      );
+
+      assert.deepEqual(
+        Array.from(cap.priceFeedId),
+        Array.from(price.priceFeedId),
+        "Both Founder oracle accounts must remain atomically aligned",
+      );
+
+      assert.equal(
+        price.sequence.toString(),
+        "0",
+        "Feed migration must not manufacture a price update",
+      );
+
+      assert.equal(
+        cap.earnedCurrentPeriodUsdE6.toString(),
+        "0",
+        "Feed migration must not modify current-period earnings",
+      );
+
+      assert.equal(
+        cap.lifetimeEarnedUsdE6.toString(),
+        "0",
+        "Feed migration must not modify lifetime earnings",
+      );
+    },
+  );
+
+  it(
+    "permanently rejects a second Founder feed migration",
+    async () => {
+      const secondFeed = Array<number>(32).fill(9);
+
+      const capBefore =
+        await treasuryRouter.account.founderUsdCapState.fetch(
+          founderUsdCapPda,
+        );
+
+      const priceBefore =
+        await treasuryRouter.account.founderPriceState.fetch(
+          founderPricePda,
+        );
+
+      let rejected = false;
+      let failureText = "";
+
+      try {
+        await treasuryRouter.methods
+          .migrateFounderFeedId(secondFeed)
+          .accountsPartial({
+            protocolState: protocolStatePda,
+            founderUsdCap: founderUsdCapPda,
+            founderPrice: founderPricePda,
+            authority,
+          })
+          .rpc();
+      } catch (error) {
+        rejected = true;
+        failureText = String(error);
+      }
+
+      assert.isTrue(
+        rejected,
+        "The self-locking migration must never succeed twice",
+      );
+
+      assert.match(
+        failureText,
+        /FounderFeedMigrationUnavailable|migration is no longer available|migration/i,
+        `Unexpected replay failure: ${failureText}`,
+      );
+
+      const capAfter =
+        await treasuryRouter.account.founderUsdCapState.fetch(
+          founderUsdCapPda,
+        );
+
+      const priceAfter =
+        await treasuryRouter.account.founderPriceState.fetch(
+          founderPricePda,
+        );
+
+      assert.deepEqual(
+        Array.from(capAfter.priceFeedId),
+        Array.from(capBefore.priceFeedId),
+        "Failed replay must not mutate FounderUsdCapState",
+      );
+
+      assert.deepEqual(
+        Array.from(priceAfter.priceFeedId),
+        Array.from(priceBefore.priceFeedId),
+        "Failed replay must not mutate FounderPriceState",
+      );
+
+      assert.deepEqual(
+        Array.from(capAfter.priceFeedId),
+        PYTH_USDC_USD_FEED_ID,
+      );
+
+      assert.deepEqual(
+        Array.from(priceAfter.priceFeedId),
+        PYTH_USDC_USD_FEED_ID,
+      );
+    },
+  );
 
   it.skip(
     "submits a verified oracle price through the adapter",

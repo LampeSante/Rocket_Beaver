@@ -128,6 +128,13 @@ pub mod treasury_router {
         )
     }
 
+    pub fn migrate_founder_feed_id(
+        ctx: Context<MigrateFounderFeedId>,
+        new_feed_id: [u8; 32],
+    ) -> Result<()> {
+        instructions::migrate_founder_feed_id::handler(ctx, new_feed_id)
+    }
+
     pub fn submit_founder_price(
         ctx: Context<SubmitFounderPrice>,
         price_feed_id: [u8; 32],
