@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum TreasuryRouterError {
+    #[msg("An arithmetic underflow occurred.")]
+    ArithmeticUnderflow,
+
     #[msg("The supplied authority is not authorized.")]
     Unauthorized,
 
@@ -126,4 +129,43 @@ pub enum TreasuryRouterError {
 
     #[msg("The Spillway would breach the protected Reserve floor.")]
     ReserveFloorViolation,
+
+    #[msg("The Founder USD-cap account version is invalid.")]
+    InvalidFounderUsdCapVersion,
+
+    #[msg("The Founder USD-cap protocol link is invalid.")]
+    InvalidFounderUsdCapProtocol,
+
+    #[msg("The Founder USD-cap settlement mint is invalid.")]
+    InvalidFounderUsdCapSettlementMint,
+
+    #[msg("The Founder USD price-feed identifier is invalid.")]
+    InvalidFounderUsdPriceFeed,
+
+    #[msg("The Founder annual USD cap must equal US$3,000,000.")]
+    InvalidFounderAnnualUsdCap,
+
+    #[msg("The Founder annual period must equal 365 days.")]
+    InvalidFounderAnnualPeriod,
+
+    #[msg("The Founder annual-period timestamp is invalid.")]
+    InvalidFounderAnnualPeriodTimestamp,
+
+    #[msg("The Founder oracle maximum age is invalid.")]
+    InvalidFounderOracleMaximumAge,
+
+    #[msg("The Founder oracle confidence limit is invalid.")]
+    InvalidFounderOracleConfidenceLimit,
+
+    #[msg("The Founder USD-cap mechanism is disabled.")]
+    FounderUsdCapDisabled,
+
+    #[msg("The Founder oracle price must be positive.")]
+    InvalidFounderOraclePrice,
+
+    #[msg("The Founder annual USD accounting state is inconsistent.")]
+    FounderAnnualUsdAccountingViolation,
+
+    #[msg("The Founder annual US$3,000,000 cap would be exceeded.")]
+    FounderAnnualUsdCapExceeded,
 }
