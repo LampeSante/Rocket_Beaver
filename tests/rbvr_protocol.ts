@@ -34,6 +34,20 @@ describe("RBVR Treasury Router — protocol integration", function () {
   const COMPANY_CAP = new anchor.BN(1_000_000_000);
   const PERIOD_DURATION = new anchor.BN(30 * 24 * 60 * 60);
 
+  const FOUNDER_PRICE_FEED_ID = Array<number>(32).fill(7);
+  const FOUNDER_MAX_PRICE_AGE_SECONDS = new anchor.BN(300);
+  const FOUNDER_MAX_CONFIDENCE_BPS = 100;
+
+  const ORACLE_ADAPTER_PROGRAM_ID = new PublicKey(
+    "E5T6hAp6pTE9iZvwMMRaUD7kDC3UkJWiiqi24fJf3sqx",
+  );
+
+  const [ORACLE_ADAPTER_AUTHORITY] =
+    PublicKey.findProgramAddressSync(
+      [Buffer.from("rbvr-oracle-authority")],
+      ORACLE_ADAPTER_PROGRAM_ID,
+    );
+
   let settlementMint: PublicKey;
   let sourceTokenAccount: PublicKey;
 
@@ -42,6 +56,8 @@ describe("RBVR Treasury Router — protocol integration", function () {
   let treasuryStatePda: PublicKey;
   let settlementVaultPda: PublicKey;
   let founderStatePda: PublicKey;
+  let founderUsdCapPda: PublicKey;
+  let founderPricePda: PublicKey;
   let companyStatePda: PublicKey;
   let executionConfigPda: PublicKey;
 
@@ -99,6 +115,16 @@ describe("RBVR Treasury Router — protocol integration", function () {
 
     [founderStatePda] = PublicKey.findProgramAddressSync(
       [Buffer.from("founder-state"), protocolStatePda.toBuffer()],
+      PROGRAM_ID,
+    );
+
+    [founderUsdCapPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("founder-usd-cap"), protocolStatePda.toBuffer()],
+      PROGRAM_ID,
+    );
+
+    [founderPricePda] = PublicKey.findProgramAddressSync(
+      [Buffer.from("founder-price"), protocolStatePda.toBuffer()],
       PROGRAM_ID,
     );
 
@@ -707,6 +733,151 @@ describe("RBVR Treasury Router — protocol integration", function () {
       ),
       "failed founder reinitialization mutated founder state",
     );
+  });
+
+  it("initializes the Founder USD annual cap", async () => {
+    await program.methods
+      .initializeFounderUsdCap(
+        FOUNDER_PRICE_FEED_ID,
+        FOUNDER_MAX_PRICE_AGE_SECONDS,
+        FOUNDER_MAX_CONFIDENCE_BPS,
+      )
+      .accountsPartial({
+        protocolState: protocolStatePda,
+        treasuryState: treasuryStatePda,
+        settlementMint,
+        founderUsdCap: founderUsdCapPda,
+        authority,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const founderUsdCap =
+      await program.account.founderUsdCapState.fetch(
+        founderUsdCapPda,
+      );
+
+    assert.equal(
+      founderUsdCap.protocol.toBase58(),
+      protocolStatePda.toBase58(),
+    );
+
+    assert.equal(
+      founderUsdCap.settlementMint.toBase58(),
+      settlementMint.toBase58(),
+    );
+
+    assert.deepEqual(
+      Array.from(founderUsdCap.priceFeedId),
+      FOUNDER_PRICE_FEED_ID,
+    );
+
+    assertBn(
+      founderUsdCap.annualCapUsdE6,
+      new anchor.BN(3_000_000_000_000),
+    );
+
+    assertBn(
+      founderUsdCap.periodDuration,
+      new anchor.BN(31_536_000),
+    );
+
+    assertBn(founderUsdCap.earnedCurrentPeriodUsdE6, 0);
+    assertBn(founderUsdCap.lifetimeEarnedUsdE6, 0);
+    assert.equal(founderUsdCap.enabled, true);
+  });
+
+  it("initializes the Founder verified-price account", async () => {
+    await program.methods
+      .initializeFounderPrice(
+        FOUNDER_PRICE_FEED_ID,
+        authority,
+        FOUNDER_MAX_PRICE_AGE_SECONDS,
+        FOUNDER_MAX_CONFIDENCE_BPS,
+      )
+      .accountsPartial({
+        protocolState: protocolStatePda,
+        treasuryState: treasuryStatePda,
+        settlementMint,
+        founderPrice: founderPricePda,
+        authority,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    const founderPrice =
+      await program.account.founderPriceState.fetch(
+        founderPricePda,
+      );
+
+    assert.equal(
+      founderPrice.protocol.toBase58(),
+      protocolStatePda.toBase58(),
+    );
+
+    assert.equal(
+      founderPrice.settlementMint.toBase58(),
+      settlementMint.toBase58(),
+    );
+
+    assert.equal(
+      founderPrice.oracleAdapterAuthority.toBase58(),
+      authority.toBase58(),
+    );
+
+    assert.deepEqual(
+      Array.from(founderPrice.priceFeedId),
+      FOUNDER_PRICE_FEED_ID,
+    );
+
+    assertBn(
+      founderPrice.maxPriceAgeSeconds,
+      FOUNDER_MAX_PRICE_AGE_SECONDS,
+    );
+
+    assert.equal(
+      founderPrice.maxConfidenceBps,
+      FOUNDER_MAX_CONFIDENCE_BPS,
+    );
+
+    assert.equal(founderPrice.enabled, true);
+    assertBn(founderPrice.sequence, 0);
+  });
+
+  it("submits a valid Founder price for local fee tests", async () => {
+    const slot = await provider.connection.getSlot();
+    const blockTime =
+      await provider.connection.getBlockTime(slot);
+
+    const publishTime = new anchor.BN(
+      blockTime ?? Math.floor(Date.now() / 1_000),
+    );
+
+    await program.methods
+      .submitFounderPrice(
+        FOUNDER_PRICE_FEED_ID,
+        new anchor.BN(1_000_000),
+        -6,
+        new anchor.BN(1_000),
+        publishTime,
+      )
+      .accountsPartial({
+        protocolState: protocolStatePda,
+        founderPrice: founderPricePda,
+        oracleAdapterAuthority: authority,
+      })
+      .rpc();
+
+    const founderPrice =
+      await program.account.founderPriceState.fetch(
+        founderPricePda,
+      );
+
+    assertBn(founderPrice.price, 1_000_000);
+    assert.equal(founderPrice.exponent, -6);
+    assertBn(founderPrice.confidence, 1_000);
+    assertBn(founderPrice.publishTime, publishTime);
+    assertBn(founderPrice.sequence, 1);
   });
 
   it("initializes company allocation controls", async () => {
@@ -1518,10 +1689,13 @@ describe("RBVR Treasury Router — protocol integration", function () {
     await program.methods
       .processFees()
       .accountsPartial({
+        settlementMint,
         protocolState: protocolStatePda,
         protocolConfig: protocolConfigPda,
         treasury: treasuryStatePda,
         founderState: founderStatePda,
+        founderUsdCap: founderUsdCapPda,
+        founderPrice: founderPricePda,
         companyState: companyStatePda,
         settlementVault: settlementVaultPda,
       })
@@ -1582,10 +1756,13 @@ describe("RBVR Treasury Router — protocol integration", function () {
       await program.methods
         .processFees()
         .accountsPartial({
+          settlementMint,
           protocolState: protocolStatePda,
           protocolConfig: protocolConfigPda,
           treasury: treasuryStatePda,
           founderState: founderStatePda,
+          founderUsdCap: founderUsdCapPda,
+          founderPrice: founderPricePda,
           companyState: companyStatePda,
           settlementVault: settlementVaultPda,
         })
