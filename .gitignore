@@ -71,3 +71,7 @@ test-ledger/
 
 # Local security scan reports
 .local-reports/
+
+# Python cache
+__pycache__/
+*.py[cod]
