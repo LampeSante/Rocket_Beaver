@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "programs/treasury-router"
+    "programs/treasury-router",
+    "oracle-adapter/programs/rbvr-oracle-adapter"
 ]
 resolver = "2"
 

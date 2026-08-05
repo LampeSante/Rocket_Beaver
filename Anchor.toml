@@ -7,6 +7,7 @@ skip-lint = false
 
 [programs.localnet]
 treasury_router = "5mEQEoksSyTMJifw88UWGna81bY6ghWPJqHNFfDWcYD3"
+rbvr_oracle_adapter = "E5T6hAp6pTE9iZvwMMRaUD7kDC3UkJWiiqi24fJf3sqx"
 
 [provider]
 cluster = "localnet"
@@ -17,5 +18,6 @@ test = "npm run test:integration"
 
 [workspace]
 members = [
-    "programs/treasury-router"
+    "programs/treasury-router",
+    "oracle-adapter/programs/rbvr-oracle-adapter"
 ]
