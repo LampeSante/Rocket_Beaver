@@ -16,7 +16,7 @@ Company allocation is capped per period, not for the life of the protocol. When 
 
 ## Founder controls
 
-Founder compensation is capped per period and follows a progressive marginal volume schedule. Later eligible volume may receive a lower marginal rate, while total compensation can continue increasing in absolute terms.
+Founder compensation is capped per period. The account includes a `current_tier` field, but the current source audit did not verify progressive marginal-rate mathematics. Later eligible volume may receive a lower marginal rate, while total compensation can continue increasing in absolute terms.
 
 When the Founder period cap is reached, excess Founder allocation is redirected to Liquidity Growth.
 

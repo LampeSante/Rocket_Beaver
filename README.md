@@ -14,7 +14,7 @@ Current milestone: **`v1.1.0-devnet-verified`**
 | Company/Operations | 20% |
 | Founder Compensation | 10% |
 
-Company and Founder controls are period-based. When either period cap is reached, overflow is redirected to Liquidity Growth. Founder compensation follows a progressive marginal volume schedule in which the applicable rate declines as eligible volume increases.
+Company and Founder controls are period-based. When either period cap is reached, overflow is redirected to Liquidity Growth. Founder compensation is period-capped and includes a `current_tier` state field. The current source audit did not verify an implemented progressive marginal-rate calculation, so no declining-rate schedule is claimed here.
 
 ## Security model
 
