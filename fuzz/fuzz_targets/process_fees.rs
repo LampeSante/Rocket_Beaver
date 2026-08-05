@@ -1,11 +1,21 @@
 #![no_main]
 
+use treasury_router::state::{
+    FounderPriceState,
+    FounderUsdCapState,
+    FOUNDER_ANNUAL_CAP_USD_E6,
+    FOUNDER_ANNUAL_PERIOD_SECONDS,
+    FOUNDER_PRICE_VERSION,
+    FOUNDER_USD_CAP_VERSION,
+};
+
+
 use anchor_lang::prelude::Pubkey;
 use libfuzzer_sys::fuzz_target;
 use treasury_router::{
     engines::beaver_score,
-    instructions::process_fees::process_fee_cycle,
-    state::{CompanyState, FounderState, ProtocolState, TreasuryState},
+    instructions::process_fees::process_fee_cycle_usd_cap,
+    state::{CompanyState, ProtocolState, TreasuryState},
 };
 
 struct Cursor<'a> {
@@ -113,17 +123,17 @@ fuzz_target!(|data: &[u8]| {
     let company_lifetime = cursor.u64();
 
     let founder_cap = cursor.u64();
-    let founder_earned = cursor.u64().min(founder_cap);
-    let founder_lifetime = cursor.u64();
+    let _founder_earned = cursor.u64().min(founder_cap);
+    let _founder_lifetime = cursor.u64();
 
     let now = cursor.i64();
     let company_started = cursor.i64();
-    let founder_started = cursor.i64();
+    let _founder_started = cursor.i64();
 
     // Keep duration non-negative while still exercising zero, tiny, and very
     // large period boundaries.
     let company_duration = (cursor.u64() >> 1) as i64;
-    let founder_duration = (cursor.u64() >> 1) as i64;
+    let _founder_duration = (cursor.u64() >> 1) as i64;
 
     let mut protocol = ProtocolState {
         version: 1,
@@ -192,20 +202,7 @@ fuzz_target!(|data: &[u8]| {
         reserved: [0; 64],
     };
 
-    let mut founder = FounderState {
-        version: 1,
-        protocol: protocol_key,
-        recipient: Pubkey::new_unique(),
-        period_cap: founder_cap,
-        earned_current_period: founder_earned,
-        lifetime_earned: founder_lifetime,
-        period_started_at: founder_started,
-        period_duration: founder_duration,
-        current_tier: cursor.u8(),
-        enabled: cursor.bool(),
-        bump: 252,
-        reserved: [0; 64],
-    };
+
 
     assert!(treasury.execution_accounting_is_valid());
 
@@ -219,13 +216,54 @@ fuzz_target!(|data: &[u8]| {
     let old_lifetime_company = treasury.lifetime_company;
     let old_lifetime_founder = treasury.lifetime_founder;
 
-    let result = process_fee_cycle(
+
+    let fuzz_now = (now).max(1);
+
+    let mut founder_usd_cap = FounderUsdCapState {
+        version: FOUNDER_USD_CAP_VERSION,
+        protocol: Pubkey::new_unique(),
+        settlement_mint: Pubkey::new_unique(),
+        price_feed_id: [7u8; 32],
+        annual_cap_usd_e6: FOUNDER_ANNUAL_CAP_USD_E6,
+        earned_current_period_usd_e6: 0,
+        lifetime_earned_usd_e6: 0,
+        period_started_at: fuzz_now,
+        period_duration: FOUNDER_ANNUAL_PERIOD_SECONDS,
+        max_price_age_seconds: 300,
+        max_confidence_bps: 100,
+        enabled: true,
+        bump: 255,
+        reserved: [0u8; 64],
+    };
+
+    let founder_price = FounderPriceState {
+        version: FOUNDER_PRICE_VERSION,
+        protocol: Pubkey::new_unique(),
+        settlement_mint: Pubkey::new_unique(),
+        price_feed_id: [7u8; 32],
+        oracle_adapter_authority: Pubkey::new_unique(),
+        price: 100_000_000,
+        exponent: -8,
+        confidence: 100_000,
+        publish_time: fuzz_now,
+        received_at: fuzz_now,
+        sequence: 1,
+        max_price_age_seconds: 300,
+        max_confidence_bps: 100,
+        enabled: true,
+        bump: 255,
+        reserved: [0u8; 64],
+    };
+
+    let result = process_fee_cycle_usd_cap(
         &mut protocol,
         &mut treasury,
-        &mut founder,
+        &mut founder_usd_cap,
+        &founder_price,
+        6,
         &mut company,
         amount,
-        now,
+        fuzz_now,
     );
 
     let outcome = match result {
@@ -248,7 +286,7 @@ fuzz_target!(|data: &[u8]| {
 
     assert_eq!(treasury.processing_epoch, old_epoch.checked_add(1).unwrap());
 
-    assert_eq!(treasury.last_processed_at, now);
+    assert_eq!(treasury.last_processed_at, fuzz_now);
     assert!(treasury.execution_accounting_is_valid());
 
     let reserve_delta = treasury
@@ -322,7 +360,10 @@ fuzz_target!(|data: &[u8]| {
     );
 
     assert!(company.spent_current_period <= company.period_cap);
-    assert!(founder.earned_current_period <= founder.period_cap);
+    assert!(
+        founder_usd_cap.earned_current_period_usd_e6
+            <= founder_usd_cap.annual_cap_usd_e6
+    );
 
     assert!(treasury.waterfall_stage <= 4);
     assert!(protocol.dam_level <= 4);
