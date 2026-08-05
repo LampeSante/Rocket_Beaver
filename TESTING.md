@@ -38,7 +38,7 @@ Fuzz targets should focus on invariant-preserving state transitions:
 
 - allocation conservation;
 - cap boundaries;
-- progressive Founder tiers;
+- fixed Founder rate and annual-cap boundaries;
 - overflow redirection;
 - Reserve floor;
 - cooldown;
