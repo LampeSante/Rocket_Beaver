@@ -213,6 +213,7 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
     } = process_fee_cycle_usd_cap(
         &mut ctx.accounts.protocol_state,
         &mut ctx.accounts.treasury,
+        &mut ctx.accounts.founder_state,
         &mut ctx.accounts.founder_usd_cap,
         &ctx.accounts.founder_price,
         ctx.accounts.settlement_mint.decimals,
@@ -457,6 +458,7 @@ pub struct FeeCycleOutcome {
 pub fn process_fee_cycle_usd_cap(
     protocol_state: &mut ProtocolState,
     treasury: &mut TreasuryState,
+    founder_state: &mut FounderState,
     founder_usd_cap: &mut FounderUsdCapState,
     founder_price: &FounderPriceState,
     settlement_token_decimals: u8,
@@ -485,7 +487,12 @@ pub fn process_fee_cycle_usd_cap(
 
     let requested_company_amount = calculate_share(amount, adaptive_allocation.company_bps)?;
 
-    let requested_founder_amount = calculate_share(amount, adaptive_allocation.founder_bps)?;
+    let requested_founder_amount =
+        crate::engines::founder::calculate_progressive_request(
+            founder_state,
+            amount,
+            adaptive_allocation.founder_bps,
+        )?;
 
     let allocated_before_remainder = base_reserve_amount
         .checked_add(buyback_amount)
