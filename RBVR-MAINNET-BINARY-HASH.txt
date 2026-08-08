@@ -1,0 +1,1 @@
+5173bc909c97b3b5c525c5ccd1bc8f51621d1d5f18ab8a5cf3000af9cc1cccb6  target/deploy/treasury_router.so
