@@ -13,7 +13,9 @@
     "test:rust": "cargo test",
     "test:devnet:verify": "ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_devnet_verify.ts",
     "test:oracle-integration": "ts-mocha -p ./tsconfig.json -t 1000000 tests/oracle_founder_usd_cap.ts",
-    "test:devnet": "ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=$HOME/rocket-beaver-dev/keys/local-deployment.json npx ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_devnet_progressive_founder_live.ts"
+    "test:devnet": "ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=$HOME/rocket-beaver-dev/keys/local-deployment.json npx ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_devnet_progressive_founder_live.ts",
+    "test:devnet:cap": "ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=/home/alec_elliott/rocket-beaver-dev/keys/local-deployment.json npx ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_devnet_founder_cap_live.ts",
+    "test:devnet:economics": "ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=/home/alec_elliott/rocket-beaver-dev/keys/local-deployment.json npx ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_devnet_full_economics_live.ts"
   },
   "keywords": [],
   "author": "",
