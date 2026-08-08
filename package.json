@@ -8,8 +8,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "ts-mocha -p ./tsconfig.json -t 1000000 tests/*.ts",
-    "test:integration": "ts-mocha -p ./tsconfig.json -t 1000000 tests/*.ts",
+    "test": "npm run test:integration",
+    "test:integration": "ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_protocol.ts",
     "test:rust": "cargo test",
     "test:devnet:verify": "ts-mocha -p ./tsconfig.json -t 1000000 tests/rbvr_devnet_verify.ts",
     "test:oracle-integration": "ts-mocha -p ./tsconfig.json -t 1000000 tests/oracle_founder_usd_cap.ts",
