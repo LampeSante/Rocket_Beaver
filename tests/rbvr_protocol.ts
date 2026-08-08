@@ -3008,6 +3008,62 @@ describe("RBVR Treasury Router — protocol integration", function () {
     await assertAllTreasuryInvariants();
   });
 
+
+  it("RT-006A rejects substituted founder destination without mutation", async () => {
+    const attackerDestination = Keypair.generate();
+
+    const founderBefore = await getAccount(
+      provider.connection,
+      founderDestination,
+    );
+
+    const treasuryBefore = await treasury();
+
+    let rejected = false;
+
+    try {
+      await program.methods
+        .authorizeFounderExecution()
+        .accountsPartial({
+          protocolState: protocolStatePda,
+          founderState: founderStatePda,
+          treasury: treasuryStatePda,
+          executionConfig: executionConfigPda,
+          settlementMint,
+          settlementVault: settlementVaultPda,
+          founderDestination: attackerDestination.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .rpc();
+    } catch (e) {
+      rejected = true;
+    }
+
+    assert.isTrue(
+      rejected,
+      "attacker founder destination must be rejected",
+    );
+
+    const founderAfter = await getAccount(
+      provider.connection,
+      founderDestination,
+    );
+
+    const treasuryAfter = await treasury();
+
+    assert.equal(
+      founderAfter.amount.toString(),
+      founderBefore.amount.toString(),
+      "founder destination changed after rejected attack",
+    );
+
+    assert.equal(
+      treasuryAfter.pendingFounder.toString(),
+      treasuryBefore.pendingFounder.toString(),
+      "treasury accounting changed after rejected attack",
+    );
+  });
+
   it("autonomously transfers the buyback allocation", async () => {
     const destinationBefore = await getAccount(
       provider.connection,
