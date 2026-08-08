@@ -1,0 +1,25 @@
+{
+  "name": "rbvr-pyth-receiver-client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "inspect": "ts-node inspect.ts"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "0.29.0",
+    "@pythnetwork/hermes-client": "2.1.0",
+    "@pythnetwork/pyth-solana-receiver": "0.13.0",
+    "@solana/web3.js": "1.77.4",
+    "rpc-websockets": "7.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@solana/web3.js": "1.77.4",
+    "rpc-websockets": "7.9.0"
+  }
+}

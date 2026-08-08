@@ -1,0 +1,30 @@
+################################################################
+# Manage RBVR deployment through Crypto Infrastructure as Code
+################################################################
+
+addon "svm" {
+    rpc_api_url = input.rpc_api_url
+    network_id = input.network_id
+}
+
+action "deploy_rbvr_oracle_adapter" "svm::deploy_program" {
+    description = "Deploy rbvr_oracle_adapter program"
+    program = svm::get_program_from_anchor_project("rbvr_oracle_adapter") 
+    authority = signer.authority
+    payer = signer.payer
+    // Optional: if you want to deploy the program via a cheatcode when targeting a Surfnet, set `instant_surfnet_deployment = true`
+    // Deploying via a cheatcode will write the program data directly to the program account, rather than sending transactions.
+    // This will make deployments instantaneous, but is deviating from how the deployments will take place on devnet/mainnet.
+    // instant_surfnet_deployment = true
+}
+
+action "deploy_treasury_router" "svm::deploy_program" {
+    description = "Deploy treasury_router program"
+    program = svm::get_program_from_anchor_project("treasury_router") 
+    authority = signer.authority
+    payer = signer.payer
+    // Optional: if you want to deploy the program via a cheatcode when targeting a Surfnet, set `instant_surfnet_deployment = true`
+    // Deploying via a cheatcode will write the program data directly to the program account, rather than sending transactions.
+    // This will make deployments instantaneous, but is deviating from how the deployments will take place on devnet/mainnet.
+    // instant_surfnet_deployment = true
+}
