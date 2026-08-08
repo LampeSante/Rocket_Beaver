@@ -176,19 +176,47 @@ describe("RBVR Devnet Founder USD Cap Enforcement", function () {
     });
 
 
+    const founderIncrease =
+      capAfter.lifetimeEarnedUsdE6.sub(
+        capBefore.lifetimeEarnedUsdE6,
+      );
+
+    const liquidityIncrease =
+      treasuryAfter.lifetimeLiquidity.sub(
+        treasuryBefore.lifetimeLiquidity,
+      );
+
+
+    console.log({
+      founderIncrease:
+        founderIncrease.toString(),
+
+      liquidityIncrease:
+        liquidityIncrease.toString(),
+
+      finalFounderUsd:
+        capAfter.lifetimeEarnedUsdE6.toString(),
+    });
+
+
     assert.isTrue(
       capAfter.lifetimeEarnedUsdE6.lte(
-        new anchor.BN(
-          "3000000000000",
-        ),
+        new anchor.BN("3000000000000"),
       ),
+      "Founder USD lifetime cap exceeded",
     );
 
 
     assert.isTrue(
-      treasuryAfter.lifetimeLiquidity.gt(
-        treasuryBefore.lifetimeLiquidity,
-      ),
+      liquidityIncrease.gt(new anchor.BN(0)),
+      "Founder overflow did not increase liquidity",
+    );
+
+
+    assert.equal(
+      capAfter.lifetimeEarnedUsdE6.toString(),
+      "3000000000000",
+      "Founder cap was not exhausted",
     );
   });
 });
