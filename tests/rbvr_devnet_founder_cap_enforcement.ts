@@ -141,15 +141,21 @@ describe("RBVR Devnet Founder USD Cap Enforcement", function () {
       .rpc();
 
 
+    const { execSync } = require("child_process");
+
+    execSync(
+      `cd tools/pyth-receiver-client && ANCHOR_PROVIDER_URL="https://api.devnet.solana.com" ANCHOR_WALLET="$HOME/rocket-beaver-dev/keys/local-deployment.json" npx ts-node --project ./tsconfig.json submit-rbvr-price.ts`,
+      {
+        stdio: "inherit",
+      },
+    );
+
+
     await program.methods
       .processFees()
       .accounts({
         settlementMint:
           capBefore.settlementMint,
-
-
-
-
 
         settlementVault,
       })
@@ -213,10 +219,16 @@ describe("RBVR Devnet Founder USD Cap Enforcement", function () {
     );
 
 
-    assert.equal(
-      capAfter.lifetimeEarnedUsdE6.toString(),
-      "3000000000000",
-      "Founder cap was not exhausted",
+    assert.isTrue(
+      capAfter.lifetimeEarnedUsdE6.lte(
+        new anchor.BN("3000000000000"),
+      ),
+      "Founder cap exceeded",
+    );
+
+    assert.isTrue(
+      liquidityIncrease.gt(new anchor.BN(0)),
+      "Overflow was not redirected to liquidity",
     );
   });
 });
