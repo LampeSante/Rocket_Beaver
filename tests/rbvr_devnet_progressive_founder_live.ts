@@ -1,6 +1,7 @@
 import * as anchor from "@anchor-lang/core";
 import { Program } from "@anchor-lang/core";
 import { PublicKey } from "@solana/web3.js";
+import { execSync } from "child_process";
 import {
   getOrCreateAssociatedTokenAccount,
   mintTo,
@@ -41,6 +42,7 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
       program.programId,
     )[0];
 
+
   const founderUsdCap =
     PublicKey.findProgramAddressSync(
       [
@@ -50,19 +52,86 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
       program.programId,
     )[0];
 
+
+
+  function refreshFounderOracle() {
+    execSync(
+      `
+      cd tools/pyth-receiver-client &&       ANCHOR_PROVIDER_URL="https://api.devnet.solana.com"       ANCHOR_WALLET="$HOME/rocket-beaver-dev/keys/local-deployment.json"       npx ts-node       --project ./tsconfig.json       submit-rbvr-price.ts
+      `,
+      {
+        stdio: "inherit",
+        shell: "/bin/bash",
+      },
+    );
+  }
+
+  async function depositTestFees(amount: number) {
+    const treasuryState =
+      await program.account.treasuryState.fetch(treasury);
+
+    const source =
+      await getOrCreateAssociatedTokenAccount(
+        provider.connection,
+        provider.wallet.payer,
+        treasuryState.settlementMint,
+        provider.wallet.publicKey,
+      );
+
+    await mintTo(
+      provider.connection,
+      provider.wallet.payer,
+      treasuryState.settlementMint,
+      source.address,
+      provider.wallet.publicKey,
+      amount,
+    );
+
+    await program.methods
+      .depositSettlement(
+        new anchor.BN(amount),
+      )
+      .accounts({
+        settlementMint:
+          treasuryState.settlementMint,
+
+        sourceTokenAccount:
+          source.address,
+
+        settlementVault:
+          new PublicKey(
+            "3xouK9KYZrWPyv8qvsDPwRtKy3rXvvsP4cQs7BfoPCa6",
+          ),
+      })
+      .rpc();
+  }
+
   it("proves founder marginal rate decreases with volume", async () => {
+
+  const protocolStateAccount =
+    await program.account.protocolState.fetch(
+      protocolState,
+    );
+
+  const founderState =
+    protocolStateAccount.founderState;
+
 
     const before =
       await program.account.treasuryState.fetch(treasury);
 
     const founderBefore =
-      await program.account.founderUsdCapState.fetch(founderUsdCap);
+      await program.account.founderState.fetch(founderState);
 
-    console.log({
+  
+  console.log({
+  });
+
+  console.log({
       founderBefore:
-        founderBefore.earnedCurrentPeriodUsdE6.toString(),
+        founderBefore.earnedCurrentPeriod.toString(),
       lifetimeBefore:
-        founderBefore.lifetimeEarnedUsdE6.toString(),
+        founderBefore.lifetimeEarned.toString(),
       treasuryFounderBefore:
         before.lifetimeFounder.toString(),
     });
@@ -71,17 +140,21 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
     //
     // Small volume cycle
     //
+    await depositTestFees(500_000);
+
+    refreshFounderOracle();
+
     await program.methods
       .processFees()
       .accounts({
         settlementMint:
           before.settlementMint,
 
-        treasury,
+        settlementVault:
+          new PublicKey(
+            "3xouK9KYZrWPyv8qvsDPwRtKy3rXvvsP4cQs7BfoPCa6",
+          ),
 
-        founderPrice,
-
-        founderUsdCap,
       })
       .rpc();
 
@@ -91,15 +164,15 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
 
 
     const founderAfterSmall =
-      await program.account.founderUsdCapState.fetch(founderUsdCap);
+      await program.account.founderState.fetch(founderState);
 
 
     const smallFounderIncrease =
       BigInt(
-        founderAfterSmall.lifetimeEarnedUsdE6.toString(),
+        founderAfterSmall.lifetimeEarned.toString(),
       ) -
       BigInt(
-        founderBefore.lifetimeEarnedUsdE6.toString(),
+        founderBefore.lifetimeEarned.toString(),
       );
 
 
@@ -112,17 +185,21 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
     //
     // Large volume cycle
     //
+    await depositTestFees(500_000);
+
+    refreshFounderOracle();
+
     await program.methods
       .processFees()
       .accounts({
         settlementMint:
           before.settlementMint,
 
-        treasury,
+        settlementVault:
+          new PublicKey(
+            "3xouK9KYZrWPyv8qvsDPwRtKy3rXvvsP4cQs7BfoPCa6",
+          ),
 
-        founderPrice,
-
-        founderUsdCap,
       })
       .rpc();
 
@@ -132,15 +209,15 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
 
 
     const founderAfterLarge =
-      await program.account.founderUsdCapState.fetch(founderUsdCap);
+      await program.account.founderState.fetch(founderState);
 
 
     const largeFounderIncrease =
       BigInt(
-        founderAfterLarge.lifetimeEarnedUsdE6.toString(),
+        founderAfterLarge.lifetimeEarned.toString(),
       ) -
       BigInt(
-        founderAfterSmall.lifetimeEarnedUsdE6.toString(),
+        founderAfterSmall.lifetimeEarned.toString(),
       );
 
 
@@ -157,10 +234,10 @@ describe("RBVR Devnet Progressive Founder Compensation Live", function () {
 
     console.log({
       founderBefore:
-        founderBefore.lifetimeEarnedUsdE6.toString(),
+        founderBefore.lifetimeEarned.toString(),
 
       founderAfter:
-        founderAfterLarge.lifetimeEarnedUsdE6.toString(),
+        founderAfterLarge.lifetimeEarned.toString(),
 
       liquidity:
         after.lifetimeLiquidity.toString(),

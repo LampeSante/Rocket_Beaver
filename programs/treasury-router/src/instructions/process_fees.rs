@@ -6,7 +6,17 @@ use crate::{
         BPS_DENOMINATOR, COMPANY_STATE_SEED, FOUNDER_STATE_SEED, PROTOCOL_CONFIG_SEED,
         PROTOCOL_SEED, TREASURY_SEED,
     },
-    engines::{beaver_score, buyback, company, dam, liquidity, reserve, sentinel, waterfall},
+    engines::{
+        apply_founder_usd_cap,
+        beaver_score,
+        buyback,
+        company,
+        dam,
+        liquidity,
+        reserve,
+        sentinel,
+        waterfall,
+    },
     errors::TreasuryRouterError,
     state::{
         CompanyState, FounderPriceState, FounderState, FounderUsdCapState, ProtocolConfig,
@@ -197,9 +207,9 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
         pre_allocation_waterfall,
         adaptive_allocation,
         requested_company_amount,
-        requested_founder_amount,
-        company_amount,
+        requested_founder_amount: _requested_founder_amount,
         founder_amount,
+        company_amount,
         reserve_deposit,
         liquidity_deposit,
         buyback_deposit,
@@ -312,7 +322,7 @@ pub fn handler(ctx: Context<ProcessFees>) -> Result<()> {
         ctx.accounts.company_state.period_cap
     );
 
-    msg!("Founder requested allocation: {}", requested_founder_amount);
+    msg!("Founder requested allocation: {}", founder_amount);
 
     msg!("Founder actual allocation: {}", founder_amount);
 
@@ -461,7 +471,7 @@ pub fn process_fee_cycle_usd_cap(
     founder_state: &mut FounderState,
     founder_usd_cap: &mut FounderUsdCapState,
     founder_price: &FounderPriceState,
-    settlement_token_decimals: u8,
+    _settlement_token_decimals: u8,
     company_state: &mut CompanyState,
     amount: u64,
     now: i64,
@@ -487,18 +497,83 @@ pub fn process_fee_cycle_usd_cap(
 
     let requested_company_amount = calculate_share(amount, adaptive_allocation.company_bps)?;
 
+
+    //
+    // Progressive founder compensation
+    //
+    // Uses cumulative protocol volume.
+    //
+    let progressive_volume =
+        treasury
+            .total_fees_received
+            .checked_add(amount)
+            .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
     let requested_founder_amount =
         crate::engines::founder::calculate_progressive_request(
-            founder_state,
-            amount,
+            progressive_volume,
             adaptive_allocation.founder_bps,
         )?;
+
+    msg!(
+        "FOUNDER DEBUG volume={} bps={} requested={}",
+        progressive_volume,
+        adaptive_allocation.founder_bps,
+        requested_founder_amount
+    );
+
+    founder_price.validate_price(now)?;
+    founder_usd_cap.validate_configuration()?;
+
+    let founder_cap_allocation =
+        apply_founder_usd_cap(
+            founder_usd_cap,
+            requested_founder_amount,
+            _settlement_token_decimals,
+            founder_price.price,
+            founder_price.exponent,
+            now,
+        )?;
+
+    let founder_amount =
+        founder_cap_allocation.founder_token_amount;
+
+    founder_state.earned_current_period =
+        founder_state
+            .earned_current_period
+            .checked_add(founder_amount)
+            .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    founder_state.lifetime_earned =
+        founder_state
+            .lifetime_earned
+            .checked_add(founder_amount)
+            .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
+
+    founder_state.current_tier =
+        if progressive_volume > 100_000_000 {
+            3
+        } else if progressive_volume > 10_000_000 {
+            2
+        } else if progressive_volume > 1_000_000 {
+            1
+        } else {
+            0
+        };
+
+    let company_allocation =
+        company::allocate(
+            company_state,
+            requested_company_amount,
+            now,
+        )?;
+
 
     let allocated_before_remainder = base_reserve_amount
         .checked_add(buyback_amount)
         .and_then(|value| value.checked_add(liquidity_amount))
         .and_then(|value| value.checked_add(requested_company_amount))
-        .and_then(|value| value.checked_add(requested_founder_amount))
+        .and_then(|value| value.checked_add(founder_amount))
         .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
 
     let rounding_remainder = amount
@@ -509,27 +584,13 @@ pub fn process_fee_cycle_usd_cap(
         .checked_add(rounding_remainder)
         .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
 
-    founder_price.validate_price(now)?;
-    founder_usd_cap.validate_configuration()?;
-
-    let founder_allocation = crate::engines::founder_usd_cap::apply_founder_usd_cap(
-        founder_usd_cap,
-        requested_founder_amount,
-        settlement_token_decimals,
-        founder_price.price,
-        founder_price.exponent,
-        now,
-    )?;
-
-    let company_allocation = company::allocate(company_state, requested_company_amount, now)?;
-
-    let founder_amount = founder_allocation.founder_token_amount;
     let company_amount = company_allocation.company_amount;
+
 
     // Locked Bevernomics rule: all Company and Founder cap overflow is
     // redirected to Liquidity Growth.
     let final_liquidity_amount = liquidity_amount
-        .checked_add(founder_allocation.liquidity_overflow_token_amount)
+        .checked_add(founder_cap_allocation.liquidity_overflow_token_amount)
         .and_then(|value| value.checked_add(company_allocation.liquidity_overflow_amount))
         .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
 
@@ -621,8 +682,8 @@ pub fn process_fee_cycle_usd_cap(
         adaptive_allocation,
         requested_company_amount,
         requested_founder_amount,
-        company_amount,
         founder_amount,
+        company_amount,
         reserve_deposit,
         liquidity_deposit,
         buyback_deposit,

@@ -14,3 +14,5 @@ pub mod waterfall;
 
 pub mod founder_usd_cap;
 pub use founder_usd_cap::*;
+
+pub mod founder_progressive;

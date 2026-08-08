@@ -116,7 +116,6 @@ pub fn allocate(founder: &mut FounderState, requested: u64, now: i64) -> Result<
 /// This only calculates the requested founder amount.
 /// The USD cap engine remains responsible for final enforcement.
 pub fn calculate_progressive_request(
-    founder: &mut FounderState,
     volume: u64,
     _founder_bps: u16,
 ) -> Result<u64> {
@@ -166,19 +165,6 @@ pub fn calculate_progressive_request(
             .ok_or(TreasuryRouterError::ArithmeticOverflow)?;
     }
 
-
-    founder.current_tier =
-        if volume > 100_000_000 {
-            3
-        } else if volume > 10_000_000 {
-            2
-        } else if volume > 1_000_000 {
-            1
-        } else {
-            0
-        };
-
-
     Ok(compensation)
 }
 
@@ -209,7 +195,6 @@ mod tests {
 
         let small =
             calculate_progressive_request(
-                &mut founder,
                 1_000_000,
                 1000,
             )
@@ -218,7 +203,6 @@ mod tests {
 
         let large =
             calculate_progressive_request(
-                &mut founder,
                 200_000_000,
                 1000,
             )
