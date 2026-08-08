@@ -30,7 +30,7 @@ if [ ! -f "$PROGRAM_BINARY" ]; then
 fi
 
 echo "Binary found:"
-$PROGRAM_BINARY
+ls -lh "$PROGRAM_BINARY"
 
 echo
 echo "Checking SHA256..."
